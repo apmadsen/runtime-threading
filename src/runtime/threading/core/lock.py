@@ -1,24 +1,25 @@
 from __future__ import annotations
-from threading import BoundedSemaphore
-from typing import Any, overload, TYPE_CHECKING
+from threading import RLock, Lock as TLock
+from typing import overload, TYPE_CHECKING
+from types import TracebackType
 from datetime import datetime
 
 from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVAL
 
-if TYPE_CHECKING:
-    from runtime.threading.core.tasks.interrupt import Interrupt
+if TYPE_CHECKING: # pragma: no cover
+    from runtime.threading.core.interrupt import Interrupt
 
-class Semaphore:
-    __slots__ = ["__semaphore"]
+class Lock:
+    __slots__ = ["__lock"]
 
-    def __init__(self, max_connections: int = 1):
-        """Creates a new semaphore.
+    def __init__(self, reentrant: bool = True):
+        """Creates a new lock.
 
         Args:
-            max_connections (bool): The maximum no of simeltaneous connections to be allowed before blocking. Defaults to 1.
+            reentrant (bool, optional): Allow same task to acquire lock multiple times. Defaults to True.
         """
 
-        self.__semaphore = BoundedSemaphore(max_connections)
+        self.__lock = RLock() if reentrant else TLock()
 
     @overload
     def acquire(self) -> bool:
@@ -64,16 +65,16 @@ class Semaphore:
         ...
     def acquire(self, timeout: float | None = None, *, interrupt: Interrupt | None = None) -> bool:
         start_time = datetime.now()
-        if timeout and timeout < 0:
+        if timeout and timeout < 0: # pragma: no cover
             raise ValueError("'timeout' must be a non-negative number")
 
         if interrupt:
             interrupt.raise_if_signaled()
 
         if timeout != None and timeout <= TASK_SUSPEND_AFTER:
-            return self.__semaphore.acquire(True, timeout)
+            return self.__lock.acquire(True, timeout)
         else:
-            if self.__semaphore.acquire(True, TASK_SUSPEND_AFTER):
+            if self.__lock.acquire(True, TASK_SUSPEND_AFTER):
                 return True
             elif timeout:
                 timeout -= TASK_SUSPEND_AFTER
@@ -83,7 +84,7 @@ class Semaphore:
             if interrupt:
                 result = False
                 while not interrupt.is_signaled:
-                    result = self.__semaphore.acquire(True, min(POLL_INTERVAL, timeout or POLL_INTERVAL))
+                    result = self.__lock.acquire(True, min(POLL_INTERVAL, timeout or POLL_INTERVAL))
                     if result:
                         return result
                     elif timeout and (datetime.now()-start_time).total_seconds() >= timeout:
@@ -91,13 +92,13 @@ class Semaphore:
                 interrupt.raise_if_signaled()
                 return result
             else:
-                return self.__semaphore.acquire(True, timeout)
+                return self.__lock.acquire(True, timeout or -1)
 
 
     def release(self):
         """Releases the lock
         """
-        self.__semaphore.release()
+        self.__lock.release()
 
 
     def __enter__(self) -> None:
@@ -105,7 +106,7 @@ class Semaphore:
         """
         self.acquire()
 
-    def __exit__(self, *args: Any):
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None):
         """Releases the lock
         """
-        self.__semaphore.release()
+        self.__lock.release()

@@ -1,10 +1,10 @@
 from __future__ import annotations
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, cast
 
-from runtime.threading.core.tasks.auto_clear_event import AutoClearEvent
-from runtime.threading.core.tasks.event import Event
-from runtime.threading.core.tasks.lock import Lock
-from runtime.threading.core.tasks.interrupt import Interrupt
+from runtime.threading.core.auto_clear_event import AutoClearEvent
+from runtime.threading.core.event import Event
+from runtime.threading.core.lock import Lock
+from runtime.threading.core.interrupt import Interrupt
 
 T = TypeVar("T")
 
@@ -71,6 +71,7 @@ class Queue(Generic[T]):
             finally:
                 self.__lock.release()
         else:
+            # raise TimeoutError
             return None, False
 
     def dequeue(self, timeout: float | None = None, interrupt: Interrupt = Interrupt.none()) -> T:
@@ -86,7 +87,7 @@ class Queue(Generic[T]):
         while True:
             result, success = self.try_dequeue(timeout, interrupt)
             if success:
-                return result # type: ignore
+                return cast(T, result)
             elif Event.wait_any([self.__event, interrupt.wait_event], timeout):
                 interrupt.raise_if_signaled()
             else:
@@ -102,16 +103,16 @@ class Queue(Generic[T]):
             self.__next = next
 
         @property
-        def previous(self) -> Queue.Node | None:
-            return self.__previous
+        def previous(self) -> Queue.Node | None: # pragma: no cover
 
+            return self.__previous
         @property
-        def next(self) -> Queue.Node | None:
+        def next(self) -> Queue.Node | None: # pragma: no cover
             return self.__next
 
         @property
-        def value(self) -> T:
-            return self.__value # type: ignore
+        def value(self) -> T: # pragma: no cover
+            return self.__value # pyright: ignore[reportReturnType]
 
         def set_previous(self, node: Queue.Node | None):
             self.__previous = node
@@ -124,7 +125,7 @@ class Queue(Generic[T]):
             self.__previous = None
             self.__next = None
             self.__value = None
-            return value # type: ignore
+            return value # pyright: ignore[reportReturnType]
 
         def __repr__(self):
-            return str(self.__value)
+            return str(self.__value) # pragma: no cover

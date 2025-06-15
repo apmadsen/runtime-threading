@@ -5,7 +5,9 @@ from time import sleep
 from threading import Event, Lock as IntLock
 
 from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER
-from runtime.threading.tasks import Lock, Semaphore, Task, InterruptSignal, TaskInterruptException, acquire_or_fail
+from runtime.threading.tasks import Task, InterruptException
+from runtime.threading import InterruptSignal, Interrupt
+from runtime.threading import Lock, Semaphore, acquire_or_fail
 
 def test_lock_sync():
     l1 = Lock()
@@ -16,6 +18,17 @@ def test_lock_sync():
 
     with assert_raises(RuntimeError):
         l1.release()
+
+    l2 = Lock(False)
+    signal = InterruptSignal()
+    l2.acquire()
+    l2.acquire(1, interrupt = signal.interrupt)
+    l2.release()
+
+    signal.signal()
+    with assert_raises(InterruptException):
+        l2.acquire(0.1, interrupt = signal.interrupt)
+
 
 def test_semaphore_sync():
     l2 = Semaphore(2)
@@ -81,7 +94,7 @@ def test_lock_async_cancellation():
     Task.run(cancel_after, cs, 0.01)
     assert not l1.acquire(0, interrupt=cs.interrupt)
     sleep(0.05)
-    with assert_raises(TaskInterruptException):
+    with assert_raises(InterruptException):
         l1.acquire(interrupt=cs.interrupt)
     sleep(0.1)
     assert l1.acquire()

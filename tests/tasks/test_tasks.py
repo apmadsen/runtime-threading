@@ -3,7 +3,8 @@ from pytest import raises as assert_raises, fixture
 from typing import Any, Iterable, Sequence, TypeVar
 from time import sleep
 
-from runtime.threading.tasks import Task, ContinuationOptions, InterruptSignal, schedulers, AggregateException, TaskInterruptException, TaskState
+from runtime.threading.tasks import Task, ContinuationOptions, schedulers, AggregateException, InterruptException, TaskState
+from runtime.threading import InterruptSignal, Interrupt
 
 
 T = TypeVar('T')
@@ -54,7 +55,7 @@ def test_generic():
     assert t.result == test_str
 
 def test_exceptions():
-    t1 = Task.future(do_something_fail, 0.05) # type: ignore
+    t1 = Task.future(do_something_fail, 0.05)
     t2 = Task.future(do_something, 0.1)
     t1.schedule()
     t2.schedule()
@@ -75,7 +76,7 @@ def test_cancellation():
     sleep(0.06)
     cs2.signal()
 
-    with assert_raises(TaskInterruptException):
+    with assert_raises(InterruptException):
         t1.wait()
     t1.wait(ignore_cancellation=True)
     assert t1.is_canceled
@@ -85,7 +86,7 @@ def test_cancellation():
     try:
         Task.wait_all([t1, t2])
     except AggregateException as ex:
-        ex.handle(lambda e: isinstance(e, TaskInterruptException))
+        ex.handle(lambda e: isinstance(e, InterruptException))
 
 
 # def test_linked_cancellation():

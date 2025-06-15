@@ -1,25 +1,25 @@
 from __future__ import annotations
 from typing import Callable
-from weakref import WeakKeyDictionary, WeakSet
+from weakref import WeakSet
+from collections import deque
 
-from runtime.threading.core.tasks.event import Event
-from runtime.threading.core.tasks.lock import Lock
+from runtime.threading.core.event import Event
+from runtime.threading.core.lock import Lock
 
 LOCK = Lock()
-LINKED_INTERRUPTS: WeakKeyDictionary[Interrupt, WeakSet[Interrupt]] = WeakKeyDictionary()
-
 
 class Interrupt:
     """The Interrupt class is used for asynchronous task cancellation. The Interrupt instance can be passed around between tasksc
     and used to poll for cancellation, while the InterruptSignal is used for signaling the Interrupt."""
 
-    __slots__ = ["__lock", "__is_signaled", "__event", "__ex", "__weakref__"]
+    __slots__ = ["__lock", "__is_signaled", "__event", "__ex", "__linked", "__weakref__"]
     __none__: Interrupt
 
     def __init__(self):
         self.__lock = Lock()
         self.__is_signaled = False
         self.__event = Event()
+        self.__linked: WeakSet[Interrupt] = WeakSet()
         self.__ex: Exception | None = None
 
 
@@ -36,6 +36,10 @@ class Interrupt:
         """
         return self.__event
 
+    @property
+    def is_none(self) -> bool:
+        return self is Interrupt.__none__
+
     @classmethod
     def none(cls) -> Interrupt:
         """Returns an empty Interrupt which cannot be signaled
@@ -44,6 +48,25 @@ class Interrupt:
             Interrupt.__none__ = Interrupt()
         return Interrupt.__none__
 
+    def propagates_to(self, interrupt: Interrupt) -> bool:
+        """Indicates if this Interrupt instance is linked to other Interrupt. If true,
+        signaling this Interrupt wil propagate signaling onto the other...
+        """
+        return self.__propagates_to(interrupt, deque())
+
+    def __propagates_to(self, interrupt: Interrupt, stack: deque[Interrupt]) -> bool:
+        stack.append(self)
+
+        if self is interrupt:
+            return True
+        elif interrupt in self.__linked:
+            return True
+        else:
+            for linked in self.__linked:
+                if linked not in stack and linked.__propagates_to(interrupt, stack.copy()):
+                    return True
+
+        return False
 
     @classmethod
     def _create(cls, *linked_interrupts: Interrupt) -> tuple[Interrupt, Callable[[], None]]:
@@ -52,27 +75,23 @@ class Interrupt:
             with LOCK:
                 for interrupt in linked_interrupts:
                     if interrupt is not Interrupt.none():
-                        if interrupt not in LINKED_INTERRUPTS:
-                            LINKED_INTERRUPTS[interrupt] = WeakSet([new_token])
-                        else:
-                            LINKED_INTERRUPTS[interrupt].add(new_token)
+                        new_token.__linked.add(interrupt)
+
+                        interrupt.__linked.add(new_token)
 
         return (new_token, new_token.__set)
 
     def __set(self) -> None:
         with self.__lock:
-            from runtime.threading.core.tasks.task_interrupt_exception import TaskInterruptException
-            self.__ex = TaskInterruptException(self)
+            from runtime.threading.core.interrupt_exception import InterruptException
+            self.__ex = InterruptException(self)
             self.__is_signaled = True
             self.__event.set()
 
-            with LOCK:
-                if self in LINKED_INTERRUPTS:
-                    for interrupt in LINKED_INTERRUPTS[self]:
-                        if not interrupt.is_signaled:
-                            interrupt.__set()
-
-                    del LINKED_INTERRUPTS[self]
+            for interrupt in self.__linked:
+                if not interrupt.is_signaled:
+                    interrupt.__set()
+            self.__linked.clear()
 
     def raise_if_signaled(self) -> None:
         """Raises a TaskCanceledException if signaled to cancel.

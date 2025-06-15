@@ -6,7 +6,7 @@ from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.tasks.task_state import TaskState
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from runtime.threading.core.tasks.task import Task
 
 class TaskContinuation(Continuation):
@@ -20,7 +20,7 @@ class TaskContinuation(Continuation):
     def try_continue(self) -> bool:
         from runtime.threading.core.tasks.task import CompletedTask
 
-        if not Continuation.try_continue(self):
+        if not super().try_continue():
             return False
         else:
             if self.__what.state == TaskState.COMPLETED and (self.__options & ContinuationOptions.ON_COMPLETED_SUCCESSFULLY == ContinuationOptions.ON_COMPLETED_SUCCESSFULLY):
@@ -30,11 +30,11 @@ class TaskContinuation(Continuation):
             elif self.__what.state == TaskState.CANCELED and (self.__options & ContinuationOptions.ON_CANCELED == ContinuationOptions.ON_CANCELED):
                 pass
             else:
-                self.__then._cancel_and_notify() # type: ignore[reportPrivateUsage]
+                self.__then._cancel_and_notify() # pyright: ignore[reportPrivateUsage]
                 return True
 
             if self.__options & ContinuationOptions.INLINE == ContinuationOptions.INLINE or isinstance(self.__then, CompletedTask):
-                TaskScheduler.current()._run(self.__then) # type: ignore[reportPrivateUsage]
+                TaskScheduler.current()._run(self.__then) # pyright: ignore[reportPrivateUsage]
             else:
                 TaskScheduler.current().queue(self.__then)
 

@@ -3,8 +3,9 @@ from datetime import datetime
 from queue import Queue as OrgQueue, Empty as QueueEmptyException
 
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
-from runtime.threading.tasks import Task, InterruptSignal, Interrupt, ContinuationOptions
-from runtime.threading.core.concurrent.queue import Queue
+from runtime.threading.tasks import Task, ContinuationOptions
+from runtime.threading import InterruptSignal, Interrupt
+from runtime.threading.concurrent import Queue
 
 def baseline_queue():
     count = 10000

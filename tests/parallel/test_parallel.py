@@ -4,9 +4,9 @@ from time import sleep
 from random import randint
 from pytest import raises as assert_raises, fixture
 
-from runtime.threading.tasks import Task, InterruptSignal, Interrupt, AggregateException, TaskInterruptException
-from runtime.threading import parallel
-from runtime.threading.parallel import distribute, ProducerConsumerQueue
+from runtime.threading.tasks import Task, AggregateException, InterruptException
+from runtime.threading import parallel, ThreadingException, InterruptSignal, Interrupt
+from runtime.threading.parallel import distribute, pipeline
 
 def test_do():
     def fn(task: Task[Any], s: float):
@@ -16,8 +16,8 @@ def test_do():
     t1 = parallel.background(parallelism=5).do(fn, 0.01)
     t1.wait()
 
-    with parallel.ParallelContext(4):
-        t2 = parallel.background().do(fn, 0.01)
+    with pipeline.PContext(4) as ctx:
+        t2 = parallel.background(scheduler=ctx.scheduler, interrupt=ctx.interrupt,parallelism=ctx.max_parallelism).do(fn, 0.01)
         t2.wait()
 
 def test_process():
@@ -35,15 +35,15 @@ def test_process():
     assert facit == result
 
     # test with a ProducerConsumerQueue iterable
-    pcq_items = ProducerConsumerQueue[int](items)
+    pcq_items = pipeline.ProducerConsumerQueue[int](items)
     output = parallel.process(pcq_items.get_iterator(), parallelism = 5, interrupt = Interrupt.none()).do(fn_process)
     result = sorted([ item for item in output ])
 
     assert len(result) == len(items)
     assert facit == result
 
-    with parallel.ParallelContext(4):
-        output = parallel.process(items).do(fn_process)
+    with pipeline.PContext(4) as ctx:
+        output = parallel.process(items, parallelism=ctx.max_parallelism,interrupt=ctx.interrupt).do(fn_process)
         result = sorted([ item for item in output ])
 
         assert len(result) == len(items)
@@ -67,6 +67,7 @@ def test_process_cancel():
     cs = InterruptSignal()
 
     def fn_process(task: Task[float], item: int) -> Iterable[float]:
+        assert cs.interrupt.propagates_to(task.interrupt)
         task.interrupt.raise_if_signaled()
         cs.signal()
         sleep(0.01)
@@ -74,12 +75,13 @@ def test_process_cancel():
 
 
     output = parallel.process(items, parallelism = 5, interrupt=cs.interrupt).do(fn_process)
-    with assert_raises(TaskInterruptException):
+
+    with assert_raises(InterruptException):
         getattr(output, "__next__")()
 
 
 def test_for_each():
-    queue = ProducerConsumerQueue[int]()
+    queue = pipeline.ProducerConsumerQueue[int]()
     def fn(task: Task[Any], s: int) -> None:
         queue.put(s)
 
@@ -98,9 +100,9 @@ def test_for_each():
     assert facit == vsum
     assert len(items) == count
 
-    with parallel.ParallelContext(4):
-        queue = ProducerConsumerQueue[int]()
-        t2 = parallel.for_each(items).do(fn)
+    with pipeline.PContext(4) as ctx:
+        queue = pipeline.ProducerConsumerQueue[int]()
+        t2 = parallel.for_each(items, parallelism=ctx.max_parallelism,interrupt=ctx.interrupt).do(fn)
         t2.wait()
         queue.complete()
 
@@ -131,8 +133,8 @@ def test_map():
     assert facit == vsum
     assert len(items) == count
 
-    with parallel.ParallelContext(4):
-        t2 = parallel.map(items).do(fn)
+    with pipeline.PContext(4) as ctx:
+        t2 = parallel.map(items, parallelism=ctx.max_parallelism,interrupt=ctx.interrupt).do(fn)
 
         count = 0
         vsum = 0
@@ -143,26 +145,3 @@ def test_map():
         facit = sum(map(lambda x: x*2, items))
         assert facit == vsum
         assert len(items) == count
-
-def test_distribute():
-    queue = ProducerConsumerQueue[str]()
-    dist = distribute(queue.get_iterator())
-    outputs: List[Iterable[str]] = []
-    facit: List[str] = []
-    for _ in range(5):
-        outputs.append(dist.take())
-
-    dist.start(Interrupt.none())
-
-    for _ in range(10):
-        s = str(randint(1, 100000))
-        facit.append(s)
-        queue.put(s)
-
-    queue.complete()
-    facit = sorted(facit)
-
-    for output in outputs:
-        assert facit == sorted(output)
-
-

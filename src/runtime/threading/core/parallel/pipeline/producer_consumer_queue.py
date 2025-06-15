@@ -1,12 +1,12 @@
 from typing import TypeVar, Generic, Iterable, Any, cast
 
-from runtime.threading.core.tasks.auto_clear_event import AutoClearEvent as Event
-from runtime.threading.core.tasks.task import Task
-from runtime.threading.core.parallel.parallel_exception import ParallelException
-from runtime.threading.core.parallel.p_iterable import PIterable, PIterator
-from runtime.threading.core.tasks.continuation_options import ContinuationOptions
-from runtime.threading.core.tasks.interrupt import Interrupt
+from runtime.threading.core.auto_clear_event import AutoClearEvent as Event
 from runtime.threading.core.concurrent.queue import Queue
+from runtime.threading.core.parallel.parallel_exception import ParallelException
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable, PIterator
+from runtime.threading.core.tasks.task import Task
+from runtime.threading.core.tasks.continuation_options import ContinuationOptions
+from runtime.threading.core.interrupt import Interrupt
 
 LINKED_TO_OUTPUT_EXCEPTION = ParallelException("ProducerConsumerQueue is linked to the output of a ProducerConsumerQueueIterator, and therefore cannot be completed manually")
 T = TypeVar('T')
@@ -198,15 +198,16 @@ class ProducerConsumerQueue(Generic[T]):
 
 class ProducerConsumerQueueIterator(PIterable[T], PIterator[T]):
     __slots__ = ["__queue"]
+
     def __init__(self, queue: ProducerConsumerQueue[T]):
         self.__queue = queue
 
-    def iter(self) -> PIterator[T]:
+    def __iter__(self) -> PIterator[T]:
         return self
 
     def next(self, timeout: float | None = None, interrupt: Interrupt = Interrupt.none()) -> T:
         result, success = self.__queue.try_take(timeout, interrupt)
         if success:
-            return result # type: ignore
+            return cast(T, result)
         else:
             raise StopIteration

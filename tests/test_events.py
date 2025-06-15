@@ -3,7 +3,7 @@ from pytest import raises as assert_raises, fixture
 from time import sleep
 from threading import Thread
 
-from runtime.threading.tasks import Event, AutoClearEvent
+from runtime.threading import Event, AutoClearEvent
 
 def test_basic():
     ev1 = Event()

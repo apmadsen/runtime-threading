@@ -5,7 +5,7 @@ from threading import Thread
 from random import randint
 from pytest import raises as assert_raises, fixture
 
-from runtime.threading.parallel import ProducerConsumerQueue
+from runtime.threading.parallel.pipeline import ProducerConsumerQueue
 
 
 def test_basics():

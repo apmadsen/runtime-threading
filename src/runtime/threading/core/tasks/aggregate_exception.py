@@ -1,6 +1,6 @@
 from typing import Iterable, Callable, Sequence
 
-from runtime.threading.core.tasks.threading_exception import ThreadingException
+from runtime.threading.core.threading_exception import ThreadingException
 
 class AggregateException(ThreadingException):
     __slots__ = ["__exceptions"]

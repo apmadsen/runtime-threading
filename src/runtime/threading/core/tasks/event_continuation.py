@@ -5,8 +5,8 @@ from threading import Event as TEvent
 from runtime.threading.core.tasks.continuation import Continuation
 from runtime.threading.core.tasks.continue_when import ContinueWhen
 
-if TYPE_CHECKING:
-    from runtime.threading.core.tasks.event import Event
+if TYPE_CHECKING: # pragma: no cover
+    from runtime.threading.core.event import Event
 
 class EventContinuation(Continuation):
     __slots__ = ["__event"]

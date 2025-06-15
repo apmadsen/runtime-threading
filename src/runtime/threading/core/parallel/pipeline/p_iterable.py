@@ -1,16 +1,12 @@
-from typing import TypeVar, Iterable, overload
-from abc import ABC, abstractmethod
+from typing import TypeVar, Iterable, Protocol, runtime_checkable, overload
 
-from runtime.threading.core.tasks.interrupt import Interrupt
-from runtime.threading.core.parallel.p_iterator import PIterator
+from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.parallel.pipeline.p_iterator import PIterator
 
-T = TypeVar("T")
+T = TypeVar("T", covariant=True)
 
-class PIterable(ABC, Iterable[T]):
-
-    @abstractmethod
-    def iter(self) -> PIterator[T]:
-        ...
+@runtime_checkable
+class PIterable(Iterable[T], Protocol):
 
     @overload
     def drain(self) -> None:
@@ -28,7 +24,7 @@ class PIterable(ABC, Iterable[T]):
         ...
     def drain(self, timeout: float | None = None, interrupt: Interrupt = Interrupt.none()) -> None:
         try:
-            iterator = self.iter()
+            iterator = self.__iter__()
             while True:
                 iterator.next(timeout, interrupt)
         except StopIteration:
@@ -36,4 +32,4 @@ class PIterable(ABC, Iterable[T]):
 
 
     def __iter__(self) -> PIterator[T]:
-        return self.iter()
+        ...

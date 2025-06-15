@@ -7,22 +7,22 @@ from weakref import WeakKeyDictionary
 
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
 from runtime.threading.core.tasks.task_exception import TaskException
-from runtime.threading.core.tasks.threading_exception import ThreadingException
-from runtime.threading.core.tasks.task_interrupt_exception import TaskInterruptException
-from runtime.threading.core.tasks.event import Event
-from runtime.threading.core.tasks.lock import Lock
+from runtime.threading.core.threading_exception import ThreadingException
+from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.event import Event
+from runtime.threading.core.lock import Lock
 from runtime.threading.core.tasks.task_state import TaskState
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.continuation import Continuation
 from runtime.threading.core.tasks.continue_when import ContinueWhen
-from runtime.threading.core.tasks.interrupt import Interrupt
-from runtime.threading.core.tasks.interrupt_signal import InterruptSignal
+from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.tasks.task_continuation import TaskContinuation
 from runtime.threading.core.tasks.tasks_continuation import TasksContinuation
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 
-if TYPE_CHECKING:
-    from runtime.threading.core.tasks.event import Event
+if TYPE_CHECKING: # pragma: no cover
+    from runtime.threading.core.event import Event
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -172,7 +172,7 @@ class Task(Generic[T]):
         """Sets the unique task name
         """
         self.__name = value or f"Task_{self.__id}"
-        TaskScheduler.current()._refresh_task() # type: ignore[reportPrivateUsage]
+        TaskScheduler.current()._refresh_task() # pyright: ignore[reportPrivateUsage]
 
     @property
     def state(self) -> TaskState:
@@ -330,12 +330,14 @@ class Task(Generic[T]):
             with self.__lock:
                 self.__transition_to(TaskState.COMPLETED)
 
-        except TaskInterruptException as ex:
+        except InterruptException as ex:
             with self.__lock:
                 self.__exception = ex
 
-                if ex.interrupt == self.__interrupt:
+                if ex.interrupt is self.__interrupt:
                     self.__transition_to(TaskState.CANCELED)
+                # elif ex.interrupt.propagates_to(self.__interrupt):
+                #     self.__transition_to(TaskState.CANCELED)
                 else:
                     self.__transition_to(TaskState.FAILED)
         except Exception as ex:
@@ -396,7 +398,7 @@ class Task(Generic[T]):
             elif self.__state >= TaskState.COMPLETED:
                 raise TaskException("Task is completed")
 
-            self.__exception = TaskInterruptException(self.__interrupt)
+            self.__exception = InterruptException(self.__interrupt)
             self.__transition_to(TaskState.CANCELED)
             self.__internal_event.set()
             Task.__notify_continuations(self)

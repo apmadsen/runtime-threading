@@ -4,7 +4,7 @@ from typing import ContextManager, Any, TYPE_CHECKING
 from abc import ABC, abstractmethod
 from weakref import WeakKeyDictionary
 
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from runtime.threading.core.tasks.task import Task
 
 LOCK = RLock()

@@ -1,4 +1,4 @@
-from runtime.threading.core.tasks.event import Event
+from runtime.threading.core.event import Event
 
 class AutoClearEvent(Event):
     """An event that is automatically cleared after continuations have been notified

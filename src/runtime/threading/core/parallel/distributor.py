@@ -3,11 +3,11 @@ from typing import Iterable, TypeVar, Generic, Sequence, cast, Any
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
-from runtime.threading.core.tasks.task_interrupt_exception import TaskInterruptException
-from runtime.threading.core.tasks.threading_exception import ThreadingException
-from runtime.threading.core.tasks.interrupt import Interrupt
-from runtime.threading.core.parallel.p_iterable import PIterable
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue, ProducerConsumerQueueIterator
+from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.threading_exception import ThreadingException
+from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
+from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.parallel.for_each import for_each
 
 T = TypeVar("T")
@@ -16,7 +16,7 @@ class Distributor(Generic[T]):
     __slots__ = ["__queue_in", "__queues_out", "__sealed"]
 
     def __init__(self, items: Iterable[T]):
-        self.__queue_in: PIterable[T] = items if isinstance(items, ProducerConsumerQueueIterator) else ProducerConsumerQueue[T](items).get_iterator() # put items in a ProducerConsumerQueue, if items is not a ProducerConsumerQueueIterator instance
+        self.__queue_in: PIterable[T] = items if isinstance(items, PIterable) else ProducerConsumerQueue[T](items).get_iterator() # put items in a ProducerConsumerQueue, if items is not a PIterable instance
         self.__queues_out: list[ProducerConsumerQueue[T]] = []
         self.__sealed = False
 
@@ -43,7 +43,7 @@ class Distributor(Generic[T]):
 
         def cancel(task: Task[None], tasks: Iterable[Task[Any]]):
             for queue in self.__queues_out:
-                queue.fail(TaskInterruptException(interrupt))
+                queue.fail(InterruptException(interrupt))
 
         def fail(task: Task[None], tasks: Iterable[Task[Any]]):
             exceptions: Sequence[Exception] = []
@@ -56,7 +56,9 @@ class Distributor(Generic[T]):
             for queue in self.__queues_out:
                 queue.fail(AggregateException(exceptions))
 
+        print(f"{id(interrupt)}")
         tasks = [ for_each(self.__queue_in, interrupt = interrupt).do(distribute) ]
+
 
         Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).then(success)
         Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).then(fail)

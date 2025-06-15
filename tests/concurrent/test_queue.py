@@ -1,8 +1,40 @@
-from typing import Iterable, Any
+from typing import Iterable, Any, cast
 
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
-from runtime.threading.tasks import Task, InterruptSignal, Interrupt, ContinuationOptions
-from runtime.threading.core.concurrent.queue import Queue
+from runtime.threading.tasks import Task, ContinuationOptions
+from runtime.threading import InterruptSignal, Interrupt
+from runtime.threading.concurrent import Queue
+
+def test_basics():
+    queue = Queue[int]()
+    facit = [ i for i in range(5) ]
+
+    for i in facit:
+        queue.enqueue(i)
+
+    result: list[int] = []
+
+    while dequeued := queue.try_dequeue():
+        if dequeued[1]:
+            result.append(cast(int, dequeued[0]))
+        else:
+            break
+
+    assert result == facit
+
+    for i in result:
+        queue.requeue(i)
+
+    result.clear()
+
+    while dequeued := queue.try_dequeue():
+        if dequeued[1]:
+            result.append(cast(int, dequeued[0]))
+        else:
+            break
+
+    assert result == list(reversed(facit))
+
 
 def test_queue():
     count = 100

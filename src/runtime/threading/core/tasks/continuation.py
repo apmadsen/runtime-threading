@@ -3,8 +3,8 @@ from typing import Sequence, Iterable, TYPE_CHECKING
 
 from runtime.threading.core.tasks.continue_when import ContinueWhen
 
-if TYPE_CHECKING:
-    from runtime.threading.core.tasks.event import Event
+if TYPE_CHECKING: # pragma: no cover
+    from runtime.threading.core.event import Event
 
 class Continuation:
     __slots__ = ["__when", "__what", "__done"]

@@ -1,14 +1,14 @@
 from math import ceil
 from typing import TypeVar, Sequence, MutableSequence, Iterable, Any, cast
 
-from runtime.threading.core.parallel.p_iterable import PIterable
-from runtime.threading.core.parallel.parallel_context import ParallelContext
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
+from runtime.threading.core.parallel.pipeline.p_context import PContext
 from runtime.threading.core.parallel.pipeline.p_fn import PFn
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
-from runtime.threading.core.tasks.task_interrupt_exception import TaskInterruptException
+from runtime.threading.core.interrupt_exception import InterruptException
 
 Tin = TypeVar("Tin")
 Tout = TypeVar("Tout")
@@ -23,30 +23,11 @@ class PFork(PFn[Tin, Tout]):
         Args:
             fns (Sequence[PFn[Tin, Tout]]): The fork functions to parallelize
         """
-    #     ...
-    # @overload
-    # def __init__(self, fns: Sequence[PFn[Tin, Tout]], parallelism: int):
-    #     """Creates a new parallel forked function
 
-    #     Args:
-    #         fns (Sequence[PFn[Tin, Tout]]): The fork functions to parallelize
-    #         parallelism (int): An int between 1 and 32 representing the max no. of parallel threads.
-    #     """
-    #     ...
-    # @overload
-    # def __init__(self, fns: Sequence[PFn[Tin, Tout]], parallelism: float):
-    #     """Creates a new parallel forked function
-
-    #     Args:
-    #         fns (Sequence[PFn[Tin, Tout]]): The fork functions to parallelize
-    #         parallelism (float): A float between 0.0 and 1.0 representing the no. of parallel threads relative to the max parallelism of the current PContext
-    #     """
-    #     ...
-    # def __init__(self, fns: Sequence[PFn[Tin, Tout]], parallelism: int | float = 2):
-        super().__init__(None, 1.0) # type: ignore
+        super().__init__(None, 1.0) # pyright: ignore[reportCallIssue, reportArgumentType]
         self.__fns = fns
         self.__tasks: MutableSequence[Task[Any]] = []
-        # self._parallelism = parallelism
+
 
     def __call__(self, items: PIterable[Tin] | Iterable[Tin]) -> PIterable[Tout]:
         if self._parent:
@@ -72,7 +53,7 @@ class PFork(PFn[Tin, Tout]):
 
         def cancel_queues(task: Task[Any], tasks: Iterable[Task[Any]]):
             for _, queue in self.__queues:
-                queue.fail(TaskInterruptException(task.interrupt))
+                queue.fail(InterruptException(task.interrupt))
 
         def fail_queues(task: Task[Any], tasks: Iterable[Task[Any]]):
             exceptions: MutableSequence[Exception] = []
@@ -97,7 +78,7 @@ class PFork(PFn[Tin, Tout]):
 
 
 
-        pc = ParallelContext.current()
+        pc = PContext.current()
         parallelism = self._parallelism if isinstance(self._parallelism, int) else ceil(self._parallelism * pc.max_parallelism)
         tasks = [
             Task.create(

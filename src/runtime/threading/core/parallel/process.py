@@ -1,15 +1,13 @@
 from typing import Sequence, Iterable, Callable, TypeVar, Concatenate, ParamSpec, Any, Generic, cast, overload
 
-from runtime.threading.core.tasks.interrupt_signal import InterruptSignal
-from runtime.threading.core.tasks.interrupt import Interrupt
+from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
-from runtime.threading.core.tasks.task_interrupt_exception import TaskInterruptException
+from runtime.threading.core.interrupt_exception import InterruptException
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
-from runtime.threading.core.parallel.p_iterable import PIterable
-from runtime.threading.core.parallel.parallel_context import ParallelContext
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue, ProducerConsumerQueueIterator
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
+from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue, ProducerConsumerQueueIterator
 from runtime.threading.core.tasks.helpers import get_function_name
 
 Tin = TypeVar("Tin")
@@ -24,7 +22,7 @@ class ProcessProto(Generic[Tin]):
         items: Iterable[Tin],
         task_name: str | None = None,
         parallelism: int | None = None,
-        interrupt: Interrupt = Interrupt.none(),
+        interrupt: Interrupt | None = None,
         scheduler: TaskScheduler | None = None
     ):
         self.__task_name = task_name
@@ -58,24 +56,22 @@ class ProcessProto(Generic[Tin]):
         **kwargs: P.kwargs
     ) -> PIterable[Tout] | Task[None]:
 
-        pc = ParallelContext.current()
-        scheduler = self.__scheduler or TaskScheduler.current() if pc == ParallelContext.root() else pc.scheduler
-        signal = InterruptSignal(self.__interrupt, pc.interrupt)
-        interrupt = signal.interrupt
-        parallelism = max(self.__parallelism or 0, pc.max_parallelism)
+        parallelism = max(1, self.__parallelism or 2)
+        interrupt = self.__interrupt or Interrupt.none()
 
         queue_in = self.__items if isinstance(self.__items, ProducerConsumerQueueIterator) else ProducerConsumerQueue[Tin](self.__items).get_iterator() # put items in a ProducerConsumerQueue, if items is not a ProducerConsumerQueueIterator instance
         queue_out = output_queue or ProducerConsumerQueue[Tout]()
 
         def process(task: Task[None], queue_in: Iterable[Tin], queue_out: ProducerConsumerQueue[Tout]) -> None:
             for item in queue_in:
+                task.interrupt.raise_if_signaled()
                 queue_out.put_many(fn(task, item, *args, **kwargs))
 
         tasks = [
             Task.create(
                 name = self.__task_name or get_function_name(fn) or None,
-                scheduler = scheduler,
-                interrupt = interrupt
+                scheduler = self.__scheduler or TaskScheduler.current(),
+                interrupt = interrupt,
             ).run(
                 process,
                 queue_in,
@@ -89,7 +85,7 @@ class ProcessProto(Generic[Tin]):
                 queue_out.complete()
 
         def cancel(task: Task[Any], tasks: Iterable[Task[Any]]):
-            queue_out.fail(TaskInterruptException(interrupt))
+            queue_out.fail(InterruptException(interrupt))
 
         def fail(task: Task[Any], tasks: Iterable[Task[Any]]):
             exceptions: Sequence[Exception] = []

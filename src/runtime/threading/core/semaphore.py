@@ -1,25 +1,24 @@
 from __future__ import annotations
-from threading import RLock, Lock as TLock
-from typing import overload, TYPE_CHECKING
-from types import TracebackType
+from threading import BoundedSemaphore
+from typing import Any, overload, TYPE_CHECKING
 from datetime import datetime
 
 from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVAL
 
-if TYPE_CHECKING:
-    from runtime.threading.core.tasks.interrupt import Interrupt
+if TYPE_CHECKING: # pragma: no cover
+    from runtime.threading.core.interrupt import Interrupt
 
-class Lock:
-    __slots__ = ["__lock"]
+class Semaphore:
+    __slots__ = ["__semaphore"]
 
-    def __init__(self, reentrant: bool = True):
-        """Creates a new lock.
+    def __init__(self, max_connections: int = 1):
+        """Creates a new semaphore.
 
         Args:
-            reentrant (bool, optional): Allow same task to acquire lock multiple times. Defaults to True.
+            max_connections (bool): The maximum no of simeltaneous connections to be allowed before blocking. Defaults to 1.
         """
 
-        self.__lock = RLock() if reentrant else TLock()
+        self.__semaphore = BoundedSemaphore(max_connections)
 
     @overload
     def acquire(self) -> bool:
@@ -72,9 +71,9 @@ class Lock:
             interrupt.raise_if_signaled()
 
         if timeout != None and timeout <= TASK_SUSPEND_AFTER:
-            return self.__lock.acquire(True, timeout)
+            return self.__semaphore.acquire(True, timeout)
         else:
-            if self.__lock.acquire(True, TASK_SUSPEND_AFTER):
+            if self.__semaphore.acquire(True, TASK_SUSPEND_AFTER):
                 return True
             elif timeout:
                 timeout -= TASK_SUSPEND_AFTER
@@ -84,7 +83,7 @@ class Lock:
             if interrupt:
                 result = False
                 while not interrupt.is_signaled:
-                    result = self.__lock.acquire(True, min(POLL_INTERVAL, timeout or POLL_INTERVAL))
+                    result = self.__semaphore.acquire(True, min(POLL_INTERVAL, timeout or POLL_INTERVAL))
                     if result:
                         return result
                     elif timeout and (datetime.now()-start_time).total_seconds() >= timeout:
@@ -92,13 +91,13 @@ class Lock:
                 interrupt.raise_if_signaled()
                 return result
             else:
-                return self.__lock.acquire(True, timeout or -1)
+                return self.__semaphore.acquire(True, timeout)
 
 
     def release(self):
         """Releases the lock
         """
-        self.__lock.release()
+        self.__semaphore.release()
 
 
     def __enter__(self) -> None:
@@ -106,7 +105,7 @@ class Lock:
         """
         self.acquire()
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None):
+    def __exit__(self, *args: Any):
         """Releases the lock
         """
-        self.__lock.release()
+        self.__semaphore.release()

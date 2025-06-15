@@ -6,11 +6,11 @@ from signal import signal, SIGTERM, SIGINT
 from datetime import datetime
 from weakref import WeakKeyDictionary
 
+from runtime.threading.core.lock import Lock
 from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVAL
 from runtime.threading.core.tasks.event_continuation import EventContinuation
 from runtime.threading.core.tasks.continue_when import ContinueWhen
-from runtime.threading.core.tasks.lock import Lock
-from runtime.threading.core.tasks.threading_exception import ThreadingException
+from runtime.threading.core.threading_exception import ThreadingException
 
 
 LOCK = Lock()
@@ -138,7 +138,7 @@ class Event:
 
     @classmethod
     def __int_wait(cls, event: TEvent, timeout: float | None = None) -> bool:
-        if timeout and timeout < 0:
+        if timeout and timeout < 0: # pragma: no cover
             raise ValueError("'timeout' must be a non-negative number")
 
         if sys.platform == "win32" and current_thread() is main_thread():
@@ -169,7 +169,7 @@ if current_thread() is main_thread():
     terminate_event = Event()
 
     def __handler(signum: int, frame: Any) -> None:
-        terminate_event.set()
+        terminate_event.set() # pragma: no cover
 
     signal(SIGTERM, __handler)
     signal(SIGINT, __handler)

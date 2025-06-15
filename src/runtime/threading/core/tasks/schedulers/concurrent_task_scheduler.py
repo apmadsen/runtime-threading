@@ -4,13 +4,13 @@ from multiprocessing import cpu_count as get_cpu_count
 from threading import Thread, Event as IntEvent, current_thread
 from contextlib import nullcontext
 
-from runtime.threading.core.tasks.task_interrupt_exception import TaskInterruptException
-from runtime.threading.core.tasks.threading_exception import ThreadingException
+from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.threading_exception import ThreadingException
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.tasks.task import Task
-from runtime.threading.core.tasks.event import Event
+from runtime.threading.core.event import Event
 from runtime.threading.core.concurrent.queue import Queue
-from runtime.threading.core.tasks.interrupt_signal import InterruptSignal
+from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.tasks.config import TASK_KEEP_ALIVE
 
 class ConcurrentTaskScheduler(TaskScheduler):
@@ -212,15 +212,15 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
                             task = self.__queue.dequeue(timeout = self.__keep_alive, interrupt = self.__close.interrupt)
 
-                except (TimeoutError, TaskInterruptException) as ex:
-                    if isinstance(ex, TaskInterruptException) and ex.interrupt != self.__close.interrupt:
+                except (TimeoutError, InterruptException) as ex:
+                    if isinstance(ex, InterruptException) and ex.interrupt != self.__close.interrupt:
                         raise
 
                     if keep_alive:
                         try:
                             task = self.__queue.dequeue(timeout = self.__keep_alive, interrupt = self.__close.interrupt)
-                        except (TimeoutError, TaskInterruptException):
-                            if isinstance(ex, TaskInterruptException) and ex.interrupt != self.__close.interrupt:
+                        except (TimeoutError, InterruptException):
+                            if isinstance(ex, InterruptException) and ex.interrupt != self.__close.interrupt:
                                 raise
 
                             with self.synchronization_lock:

@@ -5,10 +5,10 @@ import collections.abc
 
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.parallel.parallel_exception import ParallelException
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.parallel.process import process
-from runtime.threading.core.parallel.parallel_context import ParallelContext
-from runtime.threading.core.parallel.p_iterable import PIterable
+from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.parallel.pipeline.p_context import PContext
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 
 Tin = TypeVar("Tin", covariant=True)
 Tout = TypeVar("Tout", covariant=True)
@@ -72,7 +72,7 @@ class PFn(Generic[Tin, Tout]):
         if not self.__fn:
             raise ParallelException("Parallel function is NULL")
 
-        pc = ParallelContext.current()
+        pc = PContext.current()
         output = process(
             self._parent(items) if self._parent else items,
             parallelism = self._parallelism if isinstance(self._parallelism, int) else ceil(self._parallelism * pc.max_parallelism),
@@ -87,7 +87,7 @@ class PFn(Generic[Tin, Tout]):
         if not self.__fn:
             raise ParallelException("Parallel function is NULL")
 
-        pc = ParallelContext.current()
+        pc = PContext.current()
         return process(
             self._parent(items) if self._parent else items,
             parallelism = self._parallelism if isinstance(self._parallelism, int) else ceil(self._parallelism * pc.max_parallelism),
@@ -105,7 +105,7 @@ class PFn(Generic[Tin, Tout]):
         if isinstance(next, collections.abc.Sequence):
             from runtime.threading.core.parallel.pipeline.p_fork import PFork
             next = PFork[Tout, Tnext](cast(Sequence[PFn[Tout, Tnext]], next))
-        elif isinstance(next, Callable) and not isinstance(next, PFn): # type: ignore
+        elif isinstance(next, Callable) and not isinstance(next, PFn): # pyright: ignore[reportUnnecessaryIsInstance]
             from runtime.threading.core.parallel.pipeline.p_filter import PFilter
             next = cast(PFn[Tout, Tnext], PFilter[Tout](next))
 

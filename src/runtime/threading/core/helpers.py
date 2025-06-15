@@ -1,25 +1,11 @@
-from typing import Callable, TypeVar, Iterable, ContextManager
+from typing import Callable, ContextManager
 from types import TracebackType
-from runtime.threading.core.tasks.task import Task, get_function_name
+
 from runtime.threading.core.lock import Lock
 from runtime.threading.core.semaphore import Semaphore
 from runtime.threading.core.interrupt import Interrupt
 
-Tin = TypeVar("Tin")
-Tout = TypeVar("Tout")
-Tnext = TypeVar("Tnext")
 
-
-def envelop(fn: Callable[[Tout, Task[Tnext]], Iterable[Tnext]]) -> Callable[[Tout, Task[Tnext]], Iterable[Tnext]]:
-    """Envelops a task function, to create a uniform type annotation.
-
-    Args:
-        fn (Callable[[Tout, Task[Tnext]], Iterable[Tnext]]): The function
-
-    Returns:
-        Callable[[Tout, Task[Tnext]], Iterable[Tnext]]: The enveloped function
-    """
-    return fn
 
 
 def acquire_or_fail(lock: Lock | Semaphore, timeout: float, fail: Callable[[], Exception], interrupt: Interrupt = Interrupt.none()) -> ContextManager[None]:
@@ -48,8 +34,3 @@ def acquire_or_fail(lock: Lock | Semaphore, timeout: float, fail: Callable[[], E
     else:
         raise fail()
 
-
-__all__ = (
-    'get_function_name',
-    'envelop'
-)

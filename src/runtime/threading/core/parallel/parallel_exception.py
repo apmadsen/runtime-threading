@@ -1,4 +1,4 @@
-from runtime.threading.core.tasks.threading_exception import ThreadingException
+from runtime.threading.core.threading_exception import ThreadingException
 
 class ParallelException(ThreadingException):
     ...
