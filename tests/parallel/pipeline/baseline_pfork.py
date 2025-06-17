@@ -8,12 +8,11 @@ from runtime.threading.tasks import Task, AggregateException
 from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, ProducerConsumerQueue
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
 
-def baseline_pfork(parallelism: tuple[int, ...]):
-    r = 100
+def baseline_pfork(parallelism: tuple[int, ...], count: int):
     s = 0.0001
     c = 3
 
-    facit1 = [ i+1 for i in range(r) ]
+    facit1 = [ i+1 for i in range(count) ]
     facit2 = [ i+1000+500 for i in facit1 if i % 2 == 0 ]
     facit2 += [ i+2000 for i in facit1 if i % 2 != 0 and i % 3 == 0 ]
     facit2 += [ i+3000 for i in facit1 if i % 2 != 0 and i % 3 != 0 ]
@@ -43,19 +42,19 @@ def baseline_pfork(parallelism: tuple[int, ...]):
         ] | PFn(fn4, p)
 
         with ConcurrentTaskScheduler(p) as scheduler:
-            with PContext(p, Interrupt.none(), scheduler):
+            with PContext(p, scheduler=scheduler):
                 ts = datetime.now()
                 result: List[float] = []
                 for _ in range(c):
-                    queue = ProducerConsumerQueue[int]([ i for i in range(r) ])
+                    queue = ProducerConsumerQueue[int]([ i for i in range(count) ])
                     result = [ r for r in pl(queue.get_iterator()) ]
                     assert facit == sorted(result)
 
-                print(f"Parallelism={p} : {(datetime.now()-ts).total_seconds() / c:.3f} / {(6*r*s)/p:.5f}")
+                print(f"Parallelism={p} : {(datetime.now()-ts).total_seconds() / c:.3f} / {(6*count*s)/p:.5f}")
                 assert facit == sorted(result)
 
     _=0
 
 
 if __name__ == "__main__":
-    baseline_pfork((2, 4, 8))
+    baseline_pfork((2, 4, 8), 100)

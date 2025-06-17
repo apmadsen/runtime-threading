@@ -21,7 +21,7 @@ class TaskContinuation(Continuation):
         from runtime.threading.core.tasks.task import CompletedTask
 
         if not super().try_continue():
-            return False
+            return False # pragma no cover
         else:
             if self.__what.state == TaskState.COMPLETED and (self.__options & ContinuationOptions.ON_COMPLETED_SUCCESSFULLY == ContinuationOptions.ON_COMPLETED_SUCCESSFULLY):
                 pass

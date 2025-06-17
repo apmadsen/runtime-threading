@@ -1,10 +1,10 @@
 from typing import Sequence, Iterable, Callable, TypeVar, Concatenate, ParamSpec, Any, Generic, cast, overload
 
 from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.interrupt_exception import InterruptException
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
-from runtime.threading.core.interrupt_exception import InterruptException
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue, ProducerConsumerQueueIterator
@@ -57,7 +57,6 @@ class ProcessProto(Generic[Tin]):
     ) -> PIterable[Tout] | Task[None]:
 
         parallelism = max(1, self.__parallelism or 2)
-        interrupt = self.__interrupt or Interrupt.none()
 
         queue_in = self.__items if isinstance(self.__items, ProducerConsumerQueueIterator) else ProducerConsumerQueue[Tin](self.__items).get_iterator() # put items in a ProducerConsumerQueue, if items is not a ProducerConsumerQueueIterator instance
         queue_out = output_queue or ProducerConsumerQueue[Tout]()
@@ -71,7 +70,7 @@ class ProcessProto(Generic[Tin]):
             Task.create(
                 name = self.__task_name or get_function_name(fn) or None,
                 scheduler = self.__scheduler or TaskScheduler.current(),
-                interrupt = interrupt,
+                interrupt = self.__interrupt,
             ).run(
                 process,
                 queue_in,
@@ -80,14 +79,23 @@ class ProcessProto(Generic[Tin]):
             for _ in range(parallelism)
         ]
 
-        def success(task: Task[Any], tasks: Iterable[Task[Any]]):
+        def success(task: Task[Any], tasks: Sequence[Task[Any]]):
             if not output_queue:
                 queue_out.complete()
 
-        def cancel(task: Task[Any], tasks: Iterable[Task[Any]]):
-            queue_out.fail(InterruptException(interrupt))
+        def cancel(task: Task[Any], tasks: Sequence[Task[Any]]):
+            exceptions: dict[int, Exception] = {}
+            for canceled_task in [ task for task in tasks if task.is_canceled ]:
+                exception = canceled_task.exception
+                if isinstance(exception, InterruptException):
+                    exceptions[exception.interrupt.signal or 0] = exception
 
-        def fail(task: Task[Any], tasks: Iterable[Task[Any]]):
+            if len(exceptions) == 1:
+                queue_out.fail(tuple(exceptions.values())[0])
+            else:
+                queue_out.fail(AggregateException(tuple(exceptions.values())))
+
+        def fail(task: Task[Any], tasks: Sequence[Task[Any]]):
             exceptions: Sequence[Exception] = []
             for failed_task in [ task for task in tasks if task.is_failed ]:
                 exception = cast(Exception, failed_task.exception)
@@ -111,7 +119,7 @@ def process(
     items: Iterable[Tin], /,
     task_name: str | None = None,
     parallelism: int | None = None,
-    interrupt: Interrupt = Interrupt.none(),
+    interrupt: Interrupt | None = None,
     scheduler: TaskScheduler | None = None,
 ) -> ProcessProto[Tin]:
 

@@ -16,7 +16,7 @@ class PContext():
     __current__id__: ClassVar[int] = 0
 
     @overload
-    def __init__(self, max_parallelism: int) -> None:
+    def __init__(self, max_parallelism: int, /) -> None:
         """Creates a new parallel context
 
         Args:
@@ -24,16 +24,7 @@ class PContext():
         """
         ...
     @overload
-    def __init__(self, max_parallelism: int, interrupt: Interrupt) -> None:
-        """Creates a new parallel context
-
-        Args:
-            max_parallelism (int): The max no. of parallel threads.
-            interrupt (Interrupt): The Interrupt.
-        """
-        ...
-    @overload
-    def __init__(self, max_parallelism: int, interrupt: Interrupt, scheduler: TaskScheduler) -> None:
+    def __init__(self, max_parallelism: int, /, interrupt: Interrupt | None = None, scheduler: TaskScheduler | None = None) -> None:
         """Creates a new parallel context
 
         Args:
@@ -42,7 +33,12 @@ class PContext():
             scheduler (TaskScheduler): The task scheduler.
         """
         ...
-    def __init__(self, max_parallelism: int, interrupt: Interrupt = Interrupt.none(), scheduler: TaskScheduler | None = None):
+    def __init__(
+        self,
+        max_parallelism: int, /,
+        interrupt: Interrupt | None = None,
+        scheduler: TaskScheduler | None = None
+    ):
         if max_parallelism < 1:
             raise ValueError("Argument max_parallelism must be greater than 0")
 
@@ -51,7 +47,7 @@ class PContext():
             PContext.__current__id__ += 1
         self.__max_parallelism = max_parallelism
         self.__scheduler = scheduler or TaskScheduler.default()
-        self.__interrupt_signal = InterruptSignal(interrupt)
+        self.__interrupt_signal = InterruptSignal(interrupt) if interrupt else InterruptSignal()
 
     @property
     def id(self) -> int:

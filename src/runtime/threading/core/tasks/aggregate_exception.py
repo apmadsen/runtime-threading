@@ -47,4 +47,3 @@ class AggregateException(ThreadingException):
             exception = flattened
 
         return exception
-        #return self.__exceptions[0] if len(self.__exceptions) == 1 else self

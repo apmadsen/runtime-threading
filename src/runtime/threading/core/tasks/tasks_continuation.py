@@ -39,9 +39,11 @@ class TasksContinuation(Continuation):
             if self.when == ContinueWhen.ALL:
                 if states.issubset(self.__states):
                     pass
-                elif not any(missing):
+                elif not any(missing): # on or more tasks are in a wrong state
                     self.__then._cancel_and_notify() # pyright: ignore[reportPrivateUsage]
                     return True
+                else:
+                    pass # pragma: no cover
             elif self.when == ContinueWhen.ANY:
                 if (self.__options & ContinuationOptions.ON_COMPLETED_SUCCESSFULLY == ContinuationOptions.ON_COMPLETED_SUCCESSFULLY) and TaskState.COMPLETED in states:
                     pass
@@ -54,6 +56,8 @@ class TasksContinuation(Continuation):
                     return True
                 else:
                     return False
+            else:
+                pass # pragma: no cover
 
             if self.__options & ContinuationOptions.INLINE == ContinuationOptions.INLINE or isinstance(self.__then, CompletedTask):
                 TaskScheduler.current()._run(self.__then) # pyright: ignore[reportPrivateUsage]

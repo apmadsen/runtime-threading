@@ -2,9 +2,14 @@
 from pytest import raises as assert_raises, fixture
 from typing import Any, Iterable, Sequence, TypeVar
 from time import sleep
+from re import escape
 
-from runtime.threading.tasks import Task, ContinuationOptions, schedulers, AggregateException, InterruptException, TaskState
-from runtime.threading import InterruptSignal, Interrupt
+from runtime.threading.tasks import (
+    Task, ContinuationOptions, schedulers, AggregateException, TaskState, TaskException,
+    TaskCompletedError, TaskNotScheduledError, TaskAlreadyRunningError, TaskAlreadyScheduledError,
+    TaskCanceledError
+)
+from runtime.threading import InterruptSignal, Interrupt, InterruptException, Event
 
 
 T = TypeVar('T')
@@ -12,20 +17,79 @@ T = TypeVar('T')
 def test_basic():
     t1 = Task.create().future(do_something, 0.025)
     t1 = Task.future(do_something, 0.025)
+
+    with assert_raises(TaskException, match=escape(str(TaskNotScheduledError))):
+        t1.result
+
     t2 = Task.run(do_something, 0.03)
+    assert t1.id != t2.id
     t1.schedule()
+
+    with assert_raises(TaskException, match=escape(str(TaskAlreadyScheduledError))):
+        t1.schedule()
+
+
 
     assert not Task.wait_all([t1, t2], timeout=0.01)
     assert Task.wait_any([t1, t2])
     assert Task.wait_all([t1, t2])
     assert t1.wait()
+    assert t1.is_completed_successfully
+
+    with assert_raises(TaskException, match=escape(str(TaskCompletedError))):
+        t1.schedule()
+
+
+    def fn_task(task: Task[Any]) -> Task[Any] | None:
+        return task.current()
+
+    t3 = Task.run(fn_task)
+    assert t3.result is t3
+
+    def fn_parent(task: Task[Any]) -> Task[Any] | None:
+        assert task.current()
+        def fn_child(task: Task[Any]) -> Task[Any] | None:
+            return task.parent
+        return Task.run(fn_child).result
+
+    tparent = Task.run(fn_parent)
+    assert tparent.result is tparent
+
+def test_run_synchronously():
+    signal1 = Event()
+    def fn_wait_for(task: Task[Any], signal: Interrupt):
+        signal1.set()
+        Event.wait_any((task.interrupt.wait_event, signal.wait_event))
+
+
+    signal2 = InterruptSignal()
+    t1 = Task.run(fn_wait_for, signal2.interrupt)
+    signal1.wait() # needed to avoid deadlock
+
+    with assert_raises(TaskException, match=escape(str(TaskAlreadyRunningError))):
+        t1.run_synchronously()
+
+    signal2.signal()
+
+    t1.wait()
+    assert t1.is_completed
+
+    with assert_raises(TaskException, match=escape(str(TaskCompletedError))):
+        t1.run_synchronously()
+
+
+    t2 = Task.future(do_something, 0.025)
+    t2.cancel()
+
+    with assert_raises(TaskException, match=escape(str(TaskCanceledError))):
+        t2.run_synchronously()
+
 
 def test_suspend():
     with schedulers.ConcurrentTaskScheduler(1) as scheduler:
         # t2 should suspend while waiting for t1 to complete,
         # which should allow t3 to run and start t1, which in turn
         # lets t2 complete
-
 
         t1 = Task.future(do_something, 0.025)
 
@@ -60,8 +124,8 @@ def test_exceptions():
     t1.schedule()
     t2.schedule()
 
-    with assert_raises(Exception):
-        t1.wait()
+    with assert_raises(Exception, match="Task fail"):
+        t1.result
     with assert_raises(AggregateException):
         Task.wait_all([t1, t2])
 
@@ -77,8 +141,9 @@ def test_cancellation():
     cs2.signal()
 
     with assert_raises(InterruptException):
-        t1.wait()
-    t1.wait(ignore_cancellation=True)
+        t1.result
+
+    t1.wait()
     assert t1.is_canceled
 
     t2.wait()
@@ -87,6 +152,31 @@ def test_cancellation():
         Task.wait_all([t1, t2])
     except AggregateException as ex:
         ex.handle(lambda e: isinstance(e, InterruptException))
+
+
+    def fn(task: Task[Any]):
+        sig = InterruptSignal()
+        sig.signal()
+        sig.interrupt.raise_if_signaled()
+
+    t3 = Task.run(fn)
+    t3.wait()
+    assert t3.is_failed
+
+    signal1 = Event()
+    def fn_wait_for(task: Task[Any], signal: Interrupt):
+        signal1.set()
+        Event.wait_any((task.interrupt.wait_event, signal.wait_event))
+        task.interrupt.raise_if_signaled()
+
+
+
+    signal3 = InterruptSignal()
+    t3 = Task.run(fn_wait_for, signal3.interrupt)
+    signal1.wait()
+    t3.cancel()
+    t3.wait()
+    assert t3.is_canceled
 
 
 # def test_linked_cancellation():
@@ -136,8 +226,9 @@ def test_continuations():
     t7.wait()
 
     assert t4.result.endswith(" "+str(45*2))
-    with assert_raises(Exception):
+    with assert_raises(InterruptException):
         get_result(t6) # t6 is implicitly canceled and will throw an exception
+
 
     t8 = Task.future(do_something_gen, 0.01, "Task 8 done")
     t9 = Task[str].future(do_something_gen, 0.001, "Task 9 done")
@@ -160,6 +251,16 @@ def test_continuations():
         Task.run(do_something_gen, 0.02, "Task 123 done"),
         Task.run(do_something_gen, 0.001, "Task 124 done"),
     ])
+
+    def fn_fail(task: Task[str]) -> str:
+        raise Exception
+
+    t14 = Task.run(fn_fail)
+    # t15 = Task.run(fn_fail)
+    assert t14.continue_with(ContinuationOptions.ON_FAILED, continue_something).result == "Failed"
+
+    # Task.wait_any((t14,t15))
+
 
 def test_lazy_task():
     test_str = "test"
@@ -218,6 +319,9 @@ def continue_something(task: Task[str], i: Task[str]) -> str:
     if i.is_canceled:
         # print("continuation done from canceled : " + current_thread().name)
         return "Canceled"
+    if i.is_failed:
+        # print("continuation done from canceled : " + current_thread().name)
+        return "Failed"
     else:
         # print("continuation done from completed: " + current_thread().name)
         return i.result

@@ -4,8 +4,8 @@ from time import sleep
 from random import randint
 from pytest import raises as assert_raises, fixture
 
-from runtime.threading import InterruptSignal, Interrupt, ThreadingException
-from runtime.threading.tasks import AggregateException, InterruptException
+from runtime.threading import InterruptSignal, Interrupt, ThreadingException, InterruptException
+from runtime.threading.tasks import AggregateException
 from runtime.threading.parallel import distribute
 from runtime.threading.parallel.pipeline import ProducerConsumerQueue
 
@@ -17,10 +17,13 @@ def test_basics():
     for _ in range(5):
         outputs.append(dist.take())
 
-    dist.start(Interrupt.none())
+    dist.start()
 
-    with assert_raises(ThreadingException):
-        dist.start(Interrupt.none())
+    with assert_raises(ThreadingException, match="Distribution has already begun"):
+        dist.start()
+
+    with assert_raises(ThreadingException, match="Distribution has already begun"):
+        dist.take()
 
     for _ in range(10):
         s = str(randint(1, 100000))
@@ -62,3 +65,4 @@ def test_cancellation():
     for output in outputs:
         with assert_raises(InterruptException):
             result = sorted(output)
+

@@ -1,24 +1,46 @@
 # pyright: basic
-from typing import Iterable, Any, List
+from typing import Iterable, Any, cast
 from time import sleep
 from random import randint
 from pytest import raises as assert_raises, fixture
 
-from runtime.threading.tasks import Task, AggregateException, InterruptException
-from runtime.threading import parallel, ThreadingException, InterruptSignal, Interrupt
-from runtime.threading.parallel import distribute, pipeline
+from runtime.threading.tasks import Task, AggregateException
+from runtime.threading import parallel, ThreadingException, InterruptSignal, Interrupt, InterruptException
+from runtime.threading.parallel import pipeline
+from runtime.threading.concurrent import Queue
 
-def test_do():
+
+def test_background():
+    assert parallel.background() is parallel.background()
+
+    items = tuple( i for i in range(100))
+    input = Queue.from_items(items)
+    output: Queue[int] = Queue()
+
     def fn(task: Task[Any], s: float):
         task.interrupt.raise_if_signaled()
         sleep(s)
+        while result := input.try_dequeue():
+            if not result[1]:
+                break
+            output.enqueue(cast(int, result[0]))
 
-    t1 = parallel.background(parallelism=5).do(fn, 0.01)
-    t1.wait()
+
+    parallel.background().do(fn, 0.01).wait()
+
+    result = tuple(output)
+    assert items == result
+
+    input = Queue.from_items(items)
+    output: Queue[int] = Queue()
 
     with pipeline.PContext(4) as ctx:
-        t2 = parallel.background(scheduler=ctx.scheduler, interrupt=ctx.interrupt,parallelism=ctx.max_parallelism).do(fn, 0.01)
-        t2.wait()
+        parallel.background(scheduler=ctx.scheduler, interrupt=ctx.interrupt,parallelism=ctx.max_parallelism).do(fn, 0.01).wait()
+
+
+    result = tuple(output)
+    assert items == result
+
 
 def test_process():
     def fn_process(task: Task[float], item: int) -> Iterable[float]:
@@ -28,7 +50,7 @@ def test_process():
     items = [ randint(0, 100000) for _ in range(1000) ]
     facit = sorted(list(map(lambda x: 2 * x, items)))
 
-    output = parallel.process(items, parallelism = 5, interrupt = Interrupt.none()).do(fn_process)
+    output = parallel.process(items, parallelism = 5).do(fn_process)
     result = sorted([ item for item in output ])
 
     assert len(result) == len(items)
@@ -36,7 +58,7 @@ def test_process():
 
     # test with a ProducerConsumerQueue iterable
     pcq_items = pipeline.ProducerConsumerQueue[int](items)
-    output = parallel.process(pcq_items.get_iterator(), parallelism = 5, interrupt = Interrupt.none()).do(fn_process)
+    output = parallel.process(pcq_items.get_iterator(), parallelism = 5).do(fn_process)
     result = sorted([ item for item in output ])
 
     assert len(result) == len(items)
@@ -56,7 +78,7 @@ def test_process_error():
     def fn_process(task: Task[float], item: int) -> Iterable[float]:
         raise Exception()
 
-    output = parallel.process(items, parallelism = 5, interrupt = Interrupt.none()).do(fn_process)
+    output = parallel.process(items, parallelism = 5).do(fn_process)
 
     with assert_raises(AggregateException):
         getattr(output, "__next__")()
@@ -70,7 +92,7 @@ def test_process_cancel():
         assert cs.interrupt.propagates_to(task.interrupt)
         task.interrupt.raise_if_signaled()
         cs.signal()
-        sleep(0.01)
+        # sleep(0.01)
         yield item * 1.5
 
 

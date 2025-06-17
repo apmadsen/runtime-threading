@@ -42,7 +42,7 @@ class MapProto(Generic[Tin]):
             task_name = self.__task_name or get_function_name(fn) or None,
             parallelism = parallelism,
             scheduler = self.__scheduler or TaskScheduler.current(),
-            interrupt = self.__interrupt or Interrupt.none(),
+            interrupt = self.__interrupt
         ).do(
             fn,
             *args,
@@ -56,7 +56,7 @@ def map(
     items: Iterable[Tin], /,
     task_name: str | None = None,
     parallelism: int | None = None,
-    interrupt: Interrupt = Interrupt.none(),
+    interrupt: Interrupt | None = None,
     scheduler: TaskScheduler | None = None,
 ) -> MapProto[Tin]:
 

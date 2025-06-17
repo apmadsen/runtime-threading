@@ -14,15 +14,15 @@ class PIterable(Iterable[T], Protocol):
         """
         ...
     @overload
-    def drain(self, timeout: float | None = None, interrupt: Interrupt = Interrupt.none()) -> None:
+    def drain(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> None:
         """Drains the PIterable from items.
 
         Args:
             timeout (float | None, optional): The operation timeout. Defaults to None.
-            interrupt (Interrupt, optional): The Interrupt. Defaults to Interrupt.none().
+            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
         """
         ...
-    def drain(self, timeout: float | None = None, interrupt: Interrupt = Interrupt.none()) -> None:
+    def drain(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> None:
         try:
             iterator = self.__iter__()
             while True:

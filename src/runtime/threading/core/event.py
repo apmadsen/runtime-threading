@@ -1,7 +1,7 @@
 from __future__ import annotations
 import sys
 from threading import Event as TEvent, current_thread, main_thread
-from typing import Sequence, MutableSequence, Any
+from typing import Sequence, MutableSequence, Any, TYPE_CHECKING
 from signal import signal, SIGTERM, SIGINT
 from datetime import datetime
 from weakref import WeakKeyDictionary
@@ -12,6 +12,9 @@ from runtime.threading.core.tasks.event_continuation import EventContinuation
 from runtime.threading.core.tasks.continue_when import ContinueWhen
 from runtime.threading.core.threading_exception import ThreadingException
 
+
+if TYPE_CHECKING:
+    from runtime.threading.core.interrupt import Interrupt
 
 LOCK = Lock()
 CONTINUATIONS: WeakKeyDictionary[Event, MutableSequence[EventContinuation]] = WeakKeyDictionary()
@@ -44,23 +47,33 @@ class Event:
         """
         self.__internal_event.clear()
 
-    def wait(self, timeout: float | None=None) -> bool:
+    def wait(
+        self,
+        timeout: float | None = None,
+        interrupt: Interrupt | None = None,
+    ) -> bool:
         """Waits for the event to be set
 
         Args:
             timeout (float, optional): The timeout in seconds. Defaults to None
+            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
 
         Returns:
             bool: A boolean value indicating if event was set or a timeout occurred
         """
-        result = Event.__int_wait(self.__internal_event, timeout)
-        if result:
-            self._after_wait()
-        return result
+
+        if interrupt:
+            return Event.wait_any((self, interrupt.wait_event), timeout)
+        else:
+            result = Event.__int_wait(self.__internal_event, timeout)
+
+            if result:
+                self._after_wait()
+            return result
 
 
-    @classmethod
-    def wait_any(cls, events: Sequence[Event], timeout: float | None = None) -> bool:
+    @staticmethod
+    def wait_any(events: Sequence[Event], timeout: float | None = None) -> bool:
         """Waits for any of the events to be set
 
         Args:
@@ -76,8 +89,8 @@ class Event:
         return Event.__int_wait(combined_event, timeout)
 
 
-    @classmethod
-    def wait_all(cls, events: Sequence[Event], timeout: float | None = None) -> bool:
+    @staticmethod
+    def wait_all(events: Sequence[Event], timeout: float | None = None) -> bool:
         """Waits for all of the events to be set
 
         Args:
@@ -92,8 +105,8 @@ class Event:
         return Event.__int_wait(combined_event, timeout)
 
 
-    @classmethod
-    def __add_continuation(cls, events: Sequence[Event], continuation: EventContinuation) -> None:
+    @staticmethod
+    def __add_continuation(events: Sequence[Event], continuation: EventContinuation) -> None:
         with LOCK:
             already_set: Sequence[Event] = []
             for event in events:
@@ -109,8 +122,8 @@ class Event:
                 Event.__notify_continuations(event)
 
 
-    @classmethod
-    def __notify_continuations(cls, event: Event) -> None:
+    @staticmethod
+    def __notify_continuations(event: Event) -> None:
         with LOCK:
             if event in CONTINUATIONS:
                 expedited: MutableSequence[EventContinuation] = []
@@ -136,8 +149,8 @@ class Event:
 
 
 
-    @classmethod
-    def __int_wait(cls, event: TEvent, timeout: float | None = None) -> bool:
+    @staticmethod
+    def __int_wait(event: TEvent, timeout: float | None = None) -> bool:
         if timeout and timeout < 0: # pragma: no cover
             raise ValueError("'timeout' must be a non-negative number")
 

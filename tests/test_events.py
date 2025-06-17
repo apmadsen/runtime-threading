@@ -4,12 +4,14 @@ from time import sleep
 from threading import Thread
 
 from runtime.threading import Event, AutoClearEvent
+from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVAL
 
 def test_basic():
     ev1 = Event()
     ev2 = Event()
     ev3 = Event()
     ev4 = Event()
+    ev5 = Event()
     Thread(target=waitX, args=(0.0005, ev2)).start()
     Thread(target=waitX, args=(0.1, ev1)).start()
 
@@ -23,6 +25,21 @@ def test_basic():
     assert not ev3.wait(0)
     assert ev3.wait()
     assert ev3.wait(0)
+
+
+def test_task_suspend():
+    ev1 = Event()
+    ev2 = Event()
+    Thread(target=waitX, args=(POLL_INTERVAL*2, ev1)).start()
+
+    def wait(s: float, ev: Event, cb: Event):
+        ev.wait(s)
+        cb.set()
+
+    t = Thread(target=wait, args=(TASK_SUSPEND_AFTER*2, ev1, ev2))
+    t.start()
+    t.join()
+    assert ev2.is_set
 
 
 def test_auto_clear_event():
@@ -39,7 +56,7 @@ def test_auto_clear_event():
 
 
 
-def waitX(s: int, ev: Event):
+def waitX(s: float, ev: Event):
     sleep(s)
     # print("setting event")
     ev.set()

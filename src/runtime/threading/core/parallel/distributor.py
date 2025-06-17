@@ -12,6 +12,8 @@ from runtime.threading.core.parallel.for_each import for_each
 
 T = TypeVar("T")
 
+DistributionAlreadyStartedError = ThreadingException("Distribution has already begun")
+
 class Distributor(Generic[T]):
     __slots__ = ["__queue_in", "__queues_out", "__sealed"]
 
@@ -21,14 +23,14 @@ class Distributor(Generic[T]):
         self.__sealed = False
 
 
-    def start(self, interrupt: Interrupt) -> None:
+    def start(self, interrupt: Interrupt | None = None) -> None:
         """Seals distributor
 
         Args:
-            interrupt (Interrupt, optional): The Interrupt. Defaults to Interrupt.none().
+            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
         """
         if self.__sealed:
-            raise ThreadingException("Distribution has already begun")
+            raise DistributionAlreadyStartedError
 
         self.__sealed = True
 
@@ -37,15 +39,25 @@ class Distributor(Generic[T]):
             for queue in self.__queues_out:
                 queue.put(item)
 
-        def success(task: Task[None], tasks: Iterable[Task[T]]):
+        def success(task: Task[None], tasks: Sequence[Task[T]]):
             for queue in self.__queues_out:
                 queue.complete()
 
-        def cancel(task: Task[None], tasks: Iterable[Task[Any]]):
-            for queue in self.__queues_out:
-                queue.fail(InterruptException(interrupt))
+        def cancel(task: Task[None], tasks: Sequence[Task[Any]]):
+            exceptions: dict[int, Exception] = {}
+            for canceled_task in [ task for task in tasks if task.is_canceled ]:
+                exception = cast(InterruptException, canceled_task.exception)
+                exceptions[exception.interrupt.signal or 0] = exception
 
-        def fail(task: Task[None], tasks: Iterable[Task[Any]]):
+            if len(exceptions) == 1:
+                exception = exceptions[0]
+            else:
+                exception = AggregateException(tuple(exceptions.values())) # pragma: no cover -- this should never happen under normal circumstances
+
+            for queue in self.__queues_out:
+                queue.fail(cast(Exception, exception))
+
+        def fail(task: Task[None], tasks: Iterable[Task[Any]]): # pragma: no cover -- it's impossible to trigger an exception to test this
             exceptions: Sequence[Exception] = []
             for failed_task in [ task for task in tasks if task.is_failed ]:
                 exception = cast(Exception, failed_task.exception)
@@ -53,6 +65,7 @@ class Distributor(Generic[T]):
                     exception = exception.flatten()
 
                 exceptions.append(exception)
+
             for queue in self.__queues_out:
                 queue.fail(AggregateException(exceptions))
 
@@ -71,7 +84,7 @@ class Distributor(Generic[T]):
             Iterable[T]: An iterable
         """
         if self.__sealed:
-            raise ThreadingException("Distribution has already begun")
+            raise DistributionAlreadyStartedError
 
         queue = ProducerConsumerQueue[T]()
         self.__queues_out.append(queue)

@@ -8,7 +8,9 @@ from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.interrupt import Interrupt
 
-LINKED_TO_OUTPUT_EXCEPTION = ParallelException("ProducerConsumerQueue is linked to the output of a ProducerConsumerQueueIterator, and therefore cannot be completed manually")
+QueueCompletedError = ParallelException("ProducerConsumerQueue is completed")
+QueueLinkedToAnotherQueueError = ParallelException("ProducerConsumerQueue is linked to the output of a ProducerConsumerQueueIterator, and therefore cannot be completed manually")
+
 T = TypeVar('T')
 
 class ProducerConsumerQueue(Generic[T]):
@@ -30,7 +32,7 @@ class ProducerConsumerQueue(Generic[T]):
         self.__is_async = False
         self.__fail: Exception | None = None
 
-        if data != None:
+        if data is not None:
             if isinstance(data, ProducerConsumerQueueIterator):
                 self.__is_async = True
 
@@ -40,8 +42,7 @@ class ProducerConsumerQueue(Generic[T]):
 
                 self.put_many_async(cast(Iterable[T], data)).continue_with(ContinuationOptions.DEFAULT, complete)
             else:
-                if data:
-                    self.put_many(data)
+                self.put_many(data)
                 self.__is_complete = True
                 self.__notify_event.set()
 
@@ -78,9 +79,9 @@ class ProducerConsumerQueue(Generic[T]):
             item (T): The item
         """
         if self.__is_async:
-            raise LINKED_TO_OUTPUT_EXCEPTION
+            raise QueueLinkedToAnotherQueueError
         elif self.__is_complete:
-            raise ParallelException("ProducerConsumerQueue is complete")
+            raise QueueCompletedError
 
         self.__queue.enqueue(item)
         self.__notify_event.set()
@@ -92,9 +93,9 @@ class ProducerConsumerQueue(Generic[T]):
             items (Iterable[T]): The items
         """
         if self.__is_async:
-            raise LINKED_TO_OUTPUT_EXCEPTION
+            raise QueueLinkedToAnotherQueueError
         elif self.__is_complete:
-            raise ParallelException("ProducerConsumerQueue is complete")
+            raise QueueCompletedError
 
         for item in items:
             self.__queue.enqueue(item)
@@ -114,12 +115,12 @@ class ProducerConsumerQueue(Generic[T]):
 
         return Task.run(async_fill)
 
-    def try_take(self, timeout: float | None = 0, interrupt: Interrupt = Interrupt.none()) -> tuple[T | None, bool]:
+    def try_take(self, timeout: float | None = 0, interrupt: Interrupt | None = None) -> tuple[T | None, bool]:
         """Tries to take an item from the queue.
 
         Args:
             timeout (float, optional): The timeout. Defaults to 0.
-            interrupt (Interrupt, optional): The Interrupt. Defaults to Interrupt.none().
+            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
 
         Returns:
             tuple[T | None, bool]: The item and a boolean value indicating success of the take operation
@@ -142,9 +143,9 @@ class ProducerConsumerQueue(Generic[T]):
                         was_empty = True
                     else:
                         return None, False
-                elif timeout == 0 or not Event.wait_any([self.__notify_event, interrupt.wait_event], timeout):
+                elif timeout == 0 or not self.__notify_event.wait(timeout, interrupt):
                     raise TimeoutError
-                else:
+                elif interrupt:
                     interrupt.raise_if_signaled()
 
 
@@ -153,9 +154,9 @@ class ProducerConsumerQueue(Generic[T]):
         """Marks the queue completed. The queue will not accept additional items afterwards
         """
         if self.__is_async:
-            raise LINKED_TO_OUTPUT_EXCEPTION
+            raise QueueLinkedToAnotherQueueError
         elif self.__is_complete:
-            raise ParallelException("ProducerConsumerQueue is already completed")
+            raise QueueCompletedError
 
         self.__is_complete = True
         self.__notify_event.set()
@@ -179,7 +180,7 @@ class ProducerConsumerQueue(Generic[T]):
             Exception: Raises an exception if queue is async (eg. linked to the output of a ProducerConsumerQueueIterator).
         """
         if self.__is_async:
-            raise LINKED_TO_OUTPUT_EXCEPTION
+            raise QueueLinkedToAnotherQueueError
 
         self.__fail = error
         self.__is_complete = True
@@ -205,7 +206,7 @@ class ProducerConsumerQueueIterator(PIterable[T], PIterator[T]):
     def __iter__(self) -> PIterator[T]:
         return self
 
-    def next(self, timeout: float | None = None, interrupt: Interrupt = Interrupt.none()) -> T:
+    def next(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> T:
         result, success = self.__queue.try_take(timeout, interrupt)
         if success:
             return cast(T, result)

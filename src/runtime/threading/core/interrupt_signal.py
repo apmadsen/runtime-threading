@@ -35,6 +35,6 @@ class InterruptSignal:
         return self.__interrupt
 
     def signal(self) -> None:
-        """Requests cancellation.
+        """Signals associated Interrupt.
         """
-        self.__interrupt_fn()
+        self.__interrupt_fn(id(self))

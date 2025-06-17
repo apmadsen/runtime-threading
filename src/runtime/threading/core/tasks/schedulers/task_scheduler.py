@@ -1,18 +1,23 @@
 from __future__ import annotations
 from threading import Thread, RLock, current_thread, main_thread
-from typing import ContextManager, Any, TYPE_CHECKING
+from typing import ContextManager, Any, ClassVar, TYPE_CHECKING
 from abc import ABC, abstractmethod
 from weakref import WeakKeyDictionary
 
 if TYPE_CHECKING: # pragma: no cover
     from runtime.threading.core.tasks.task import Task
 
+from runtime.threading.core.tasks.task_exception import TaskException
+
 LOCK = RLock()
 THREADS: WeakKeyDictionary[Thread, tuple[TaskScheduler, Task[Any] | None]] = WeakKeyDictionary()
 
+SchedulerClosedError = TaskException("Task scheduler has been closed")
+TaskAlreadyStartedOrScheduledError = TaskException("Task is already running or scheduled on another scheduler.")
+
 class TaskScheduler(ABC):
     __slots__ = ["__lock"]
-    __default__: TaskScheduler
+    __default__: ClassVar[TaskScheduler | None] = None
 
     def __init__(self):
         self.__lock = RLock()
@@ -24,14 +29,19 @@ class TaskScheduler(ABC):
         """
         return self.__lock
 
+    @property
+    @abstractmethod
+    def is_closed(self) -> bool:
+        ...
+
     @classmethod
     def default(cls) -> TaskScheduler:
         """Returns the default task scheduler
         """
         with LOCK:
-            if not hasattr(TaskScheduler, "__default__"):
+            if TaskScheduler.__default__ is None or TaskScheduler.__default__.is_closed:
                 from runtime.threading.core.tasks.schedulers.concurrent_task_scheduler import ConcurrentTaskScheduler
-                setattr(TaskScheduler, "__default__", ConcurrentTaskScheduler())
+                TaskScheduler.__default__ = ConcurrentTaskScheduler()
             return TaskScheduler.__default__
 
     @classmethod
@@ -82,6 +92,8 @@ class TaskScheduler(ABC):
 
         if cur_thread != main_thread():
             cur_thread.name = task.name
+        else:
+            pass  # pragma: no cover
 
         task.run_synchronously()
 
@@ -98,17 +110,21 @@ class TaskScheduler(ABC):
 
         if cur_thread != main_thread():
             cur_thread.name = task.name
+        else:
+            pass  # pragma: no cover
 
     def _refresh_task(self) -> None:
         """Refreshes task info, like the name.
         """
-
-        cur_thread = current_thread()
-        cur_task = TaskScheduler.current_task()
-        if cur_task:
+        if cur_task := TaskScheduler.current_task():
             with LOCK:
-                if current_thread() != main_thread():
+                cur_thread = current_thread()
+                if cur_thread != main_thread():
                     cur_thread.name = cur_task.name
+                else:
+                    pass  # pragma: no cover
+        else:
+            pass # pragma: no cover
 
     def _unregister(self) -> None:
         """Un-registers the current thread on the task scheduler
@@ -140,4 +156,3 @@ class TaskScheduler(ABC):
         """Suspends the current task, ie. when waiting on an event.
         """
         ...
-

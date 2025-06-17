@@ -1,4 +1,5 @@
-from typing import Callable, Concatenate, ParamSpec, TypeVar
+from __future__ import annotations
+from typing import Callable, Concatenate, ParamSpec, TypeVar, ClassVar
 
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.tasks.task import Task
@@ -11,6 +12,21 @@ T = TypeVar("T")
 
 class BackgroundProto:
     __slots__ = [ "__task_name", "__parallelism", "__interrupt", "__scheduler" ]
+    __default__: ClassVar[BackgroundProto | None] = None
+
+    def __new__(
+        cls,
+        task_name: str | None = None,
+        parallelism: int | None = None,
+        interrupt: Interrupt | None = None,
+        scheduler: TaskScheduler | None = None
+    ):
+        if task_name is parallelism is interrupt is scheduler is None:
+            if BackgroundProto.__default__ is None:
+                BackgroundProto.__default__ = super().__new__(cls)
+            return BackgroundProto.__default__
+        else:
+            return super().__new__(cls)
 
     def __init__(
         self,
@@ -37,7 +53,7 @@ class BackgroundProto:
             Task.create(
                 name = self.__task_name or get_function_name(fn) or None,
                 scheduler = self.__scheduler or TaskScheduler.current(),
-                interrupt = self.__interrupt or Interrupt.none(),
+                interrupt = self.__interrupt,
             ).run(
                 fn,
                 *args,
@@ -50,7 +66,7 @@ def background(
     *,
     task_name: str | None = None,
     parallelism: int | None = None,
-    interrupt: Interrupt = Interrupt.none(),
+    interrupt: Interrupt | None = None,
     scheduler: TaskScheduler | None = None
 ) -> BackgroundProto:
 

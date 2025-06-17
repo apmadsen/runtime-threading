@@ -1,21 +1,36 @@
 from typing import Callable, ContextManager
 from types import TracebackType
+from threading import Thread
 
+from runtime.threading.core.event import terminate_event
 from runtime.threading.core.lock import Lock
 from runtime.threading.core.semaphore import Semaphore
 from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.interrupt_signal import InterruptSignal
+
+def signal_after(signal: InterruptSignal, time: float) -> None:
+    def fn_signal():
+        terminate_event.wait(time)
+        signal.signal()
+
+    t = Thread(target = fn_signal)
+    t.start()
+    t.join()
 
 
-
-
-def acquire_or_fail(lock: Lock | Semaphore, timeout: float, fail: Callable[[], Exception], interrupt: Interrupt = Interrupt.none()) -> ContextManager[None]:
+def acquire_or_fail(
+    lock: Lock | Semaphore,
+    timeout: float,
+    fail: Callable[[], Exception],
+    interrupt: Interrupt | None = None,
+) -> ContextManager[None]:
     """Tries to acquire lock for a specific period of time, and raises a specific exception after timeout.
 
     Args:
         lock (Lock | Semaphore): The lock opr semaphore.
         timeout (float): The timeout in seconds after which an exception is thrown.
         fail (Callable[[], Exception]): The exception generator function.
-        interrupt (Interrupt, optional): The Interrupt. Defaults to Interrupt.none().
+        interrupt (Interrupt, optional): The Interrupt. Defaults to None.
     """
 
     if lock.acquire(timeout, interrupt = interrupt):
@@ -33,4 +48,3 @@ def acquire_or_fail(lock: Lock | Semaphore, timeout: float, fail: Callable[[], E
         return Ctx(lock)
     else:
         raise fail()
-

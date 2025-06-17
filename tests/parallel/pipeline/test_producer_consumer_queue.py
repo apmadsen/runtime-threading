@@ -2,10 +2,13 @@
 from typing import List, cast
 from time import sleep
 from threading import Thread
+from re import escape
 from random import randint
 from pytest import raises as assert_raises, fixture
 
 from runtime.threading.parallel.pipeline import ProducerConsumerQueue
+from runtime.threading.parallel import ParallelException
+from runtime.threading.core.parallel.pipeline.producer_consumer_queue import QueueCompletedError, QueueLinkedToAnotherQueueError
 
 
 def test_basics():
@@ -24,12 +27,42 @@ def test_basics():
     pcq1 = ProducerConsumerQueue[int](items1)
     pcq2 = ProducerConsumerQueue[int](pcq1.get_iterator())
 
+    assert not pcq1.is_async
+    assert pcq2.is_async
+    assert not pcq2.wait_event.wait(0)
+
+    with assert_raises(ParallelException, match=escape(str(QueueCompletedError))):
+        pcq1.put(1)
+    with assert_raises(ParallelException, match=escape(str(QueueLinkedToAnotherQueueError))):
+        pcq2.put(1)
+
+    with assert_raises(ParallelException, match=escape(str(QueueCompletedError))):
+        pcq1.put_many((1,2,3))
+    with assert_raises(ParallelException, match=escape(str(QueueLinkedToAnotherQueueError))):
+        pcq2.put_many((1,2,3))
+
+    with assert_raises(ParallelException, match=escape(str(QueueCompletedError))):
+        pcq1.complete()
+
+    with assert_raises(ParallelException, match=escape(str(QueueLinkedToAnotherQueueError))):
+        pcq2.complete()
+
+    with assert_raises(ParallelException, match=escape(str(QueueLinkedToAnotherQueueError))):
+        pcq2.fail_if_not_complete(Exception("Fail"))
+
     items = []
     for item in pcq2.get_iterator():
         items.append(item)
 
 
     assert items1 == items
+    assert not pcq.is_failed
+
+    pcq3 = ProducerConsumerQueue[int]()
+    pcq3.fail_if_not_complete(Exception("Fail"))
+
+    with assert_raises(Exception, match="Fail"):
+        pcq3.try_take()
 
 
 def test_put_many():

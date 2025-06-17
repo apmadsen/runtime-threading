@@ -12,7 +12,7 @@ from tests.parallel.pipeline.baseline_pfn import baseline_pfn
 from tests.parallel.pipeline.baseline_pfork import baseline_pfork
 
 def test_pfn():
-    baseline_pfn((2,))
+    baseline_pfn((2,), 10)
 
 def test_error_handling():
     def fn1(task: Task[float], item: int) -> Iterable[float]:
@@ -33,7 +33,7 @@ def test_error_handling():
     fn = PFn(fn1) | PFn(fn2)
     fn([1,2,3,4,5]).drain()
 
-    with assert_raises(Exception):
+    with assert_raises(AggregateException):
         fn([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
 
 
@@ -42,10 +42,9 @@ def test_error_handling():
         PFn(fn2)
     ]
 
-    with assert_raises(Exception):
+    with assert_raises(TypeError, match="can't multiply sequence by non-int of type 'float'"):
         pl([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
 
-    _=0
 
 
 def test_pfilter():
@@ -57,15 +56,15 @@ def test_pfilter():
         yield item * 2
 
     with ConcurrentTaskScheduler(4) as scheduler:
-        with PContext(4, Interrupt.none(), scheduler):
+        with PContext(4, scheduler = scheduler):
             f1 = NullPFn() | filter | PFn(fn)
 
             facit = [ o * 2 for o in range(1000) if o % 2 == 0 ]
             results = [ o for o in f1(queue.get_iterator()) ]
 
     assert sorted(results) == facit
-    _=0
+
 
 def test_pfork():
-    baseline_pfork((2,))
+    baseline_pfork((2,), 10)
 

@@ -12,12 +12,11 @@ class Interrupt:
     """The Interrupt class is used for asynchronous task cancellation. The Interrupt instance can be passed around between tasksc
     and used to poll for cancellation, while the InterruptSignal is used for signaling the Interrupt."""
 
-    __slots__ = ["__lock", "__is_signaled", "__event", "__ex", "__linked", "__weakref__"]
-    __none__: Interrupt
+    __slots__ = ["__lock", "__signal", "__event", "__ex", "__linked", "__weakref__"]
 
     def __init__(self):
         self.__lock = Lock()
-        self.__is_signaled = False
+        self.__signal: int | None = None
         self.__event = Event()
         self.__linked: WeakSet[Interrupt] = WeakSet()
         self.__ex: Exception | None = None
@@ -28,7 +27,12 @@ class Interrupt:
         """Indicates if Interrupt has been signaled
         """
         with self.__lock:
-            return self.__is_signaled
+            return self.__signal is not None
+
+    @property
+    def signal(self) -> int | None:
+        with self.__lock:
+            return self.__signal
 
     @property
     def wait_event(self) -> Event:
@@ -36,30 +40,17 @@ class Interrupt:
         """
         return self.__event
 
-    @property
-    def is_none(self) -> bool:
-        return self is Interrupt.__none__
-
-    @classmethod
-    def none(cls) -> Interrupt:
-        """Returns an empty Interrupt which cannot be signaled
-        """
-        if not hasattr(Interrupt, "__none__"):
-            Interrupt.__none__ = Interrupt()
-        return Interrupt.__none__
-
     def propagates_to(self, interrupt: Interrupt) -> bool:
         """Indicates if this Interrupt instance is linked to other Interrupt. If true,
-        signaling this Interrupt wil propagate signaling onto the other...
+        signaling this Interrupt will propagate signal onto the other.
+        Note: This information is not available after Interrupt has been signaled...
         """
         return self.__propagates_to(interrupt, deque())
 
     def __propagates_to(self, interrupt: Interrupt, stack: deque[Interrupt]) -> bool:
         stack.append(self)
 
-        if self is interrupt:
-            return True
-        elif interrupt in self.__linked:
+        if interrupt in self.__linked:
             return True
         else:
             for linked in self.__linked:
@@ -69,33 +60,36 @@ class Interrupt:
         return False
 
     @classmethod
-    def _create(cls, *linked_interrupts: Interrupt) -> tuple[Interrupt, Callable[[], None]]:
+    def _create(cls, *linked_interrupts: Interrupt) -> tuple[Interrupt, Callable[[int], None]]:
         new_token = Interrupt()
         if linked_interrupts:
             with LOCK:
                 for interrupt in linked_interrupts:
-                    if interrupt is not Interrupt.none():
-                        new_token.__linked.add(interrupt)
-
-                        interrupt.__linked.add(new_token)
+                    interrupt.__linked.add(new_token)
 
         return (new_token, new_token.__set)
 
-    def __set(self) -> None:
+    def __set(self, signal: int) -> None:
         with self.__lock:
             from runtime.threading.core.interrupt_exception import InterruptException
             self.__ex = InterruptException(self)
-            self.__is_signaled = True
+            self.__signal = signal
             self.__event.set()
 
             for interrupt in self.__linked:
                 if not interrupt.is_signaled:
-                    interrupt.__set()
+                    interrupt.__set(signal)
+
             self.__linked.clear()
 
     def raise_if_signaled(self) -> None:
-        """Raises a TaskCanceledException if signaled to cancel.
+        """Raises an InterruptException if signaled.
         """
         with self.__lock:
-            if self.__is_signaled and self.__ex:
+            if self.signal is not None and self.__ex:
                 raise self.__ex
+
+    def wait(self, timeout: float | None = None) -> bool:
+        """Waits for a signal. Same as wait_handle.wait().
+        """
+        return self.__event.wait(timeout)

@@ -52,7 +52,7 @@ class ForEachProto(Generic[T]):
             Task.create(
                 name = self.__task_name or get_function_name(fn) or None,
                 scheduler = self.__scheduler or TaskScheduler.current(),
-                interrupt = self.__interrupt or Interrupt.none(),
+                interrupt = self.__interrupt
             ).run(
                 process,
                 queue.get_iterator(),
@@ -67,7 +67,7 @@ def for_each(
     items: Iterable[T],
     task_name: str | None = None,
     parallelism: int | None = None,
-    interrupt: Interrupt = Interrupt.none(),
+    interrupt: Interrupt | None = None,
     scheduler: TaskScheduler | None = None
 ) -> ForEachProto[T]:
     """Performs work on each item in parallel.
@@ -76,7 +76,7 @@ def for_each(
     Args:
         items (Iterable[T]): The source items
         fn (Callable[T, Task]): The target function
-        interrupt (Interrupt, optional): The Interrupt. Defaults to Defaults to Interrupt.none().
+        interrupt (Interrupt, optional): The Interrupt. Defaults to Defaults to None.
 
     Returns:
         Task: A continuation task
