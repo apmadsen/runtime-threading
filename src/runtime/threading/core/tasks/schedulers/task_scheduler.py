@@ -23,10 +23,6 @@ class TaskScheduler(ABC):
         self.__lock = RLock()
 
     @property
-    def id(self) -> int:
-        return id(self)
-
-    @property
     def synchronization_lock(self) -> RLock:
         """The internal synchronization lock
         """

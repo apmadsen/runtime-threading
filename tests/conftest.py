@@ -49,7 +49,7 @@ def report_continuations():
             for continuation in set( continuation for _, continuations in DEBUG_CONTINUATIONS.items() for continuation in continuations ):
                 print(f"{get_type_name(type(continuation))} {id(continuation)} ->")
                 for cont_event in continuation.events:
-                    print(f"\tEVENT {cont_event.id} : {cont_event.is_signaled} ->")
+                    print(f"\tEVENT {id(getattr(cont_event, '_Event__internal_event'))} : {cont_event.is_signaled} ->")
                     for continuation1 in getattr(cont_event, "_Event__continuations"):
                         print(f"\t\t{get_type_name(type(continuation))} {id(continuation1)}")
 
@@ -62,7 +62,7 @@ def report_tasks():
         if schedulers:
             print("\n-- TASKS:")
             for scheduler, (thread, task) in schedulers.items():
-                print(f"\tSCHEDULER {scheduler.id} :")
+                print(f"\tSCHEDULER {id(scheduler)} :")
                 # if isinstance(scheduler, ConcurrentTaskScheduler):
                 #     threads = cast(tuple[Thread], getattr(scheduler, "_ConcurrentTaskScheduler__active_threads"))
                 #     for thread in threads:

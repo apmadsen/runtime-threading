@@ -42,10 +42,6 @@ class Event:
         self.__continuations: set[Continuation] = set()
 
     @property
-    def id(self) -> int:
-        return id(self.__internal_event)
-
-    @property
     def is_signaled(self) -> bool:
         """Indicates if the underlying events flag is set or not
         """
@@ -170,21 +166,21 @@ class Event:
 
     @staticmethod
     def add_continuation(events: Sequence[Event], continuation: Continuation) -> None:
-            if continuation.interrupt and continuation.interrupt not in events:
-                events = ( continuation.interrupt.wait_event, *events )
+        if continuation.interrupt and continuation.interrupt not in events:
+            events = ( continuation.interrupt.wait_event, *events )
 
-            for event in events:
-                if DEBUG: # pragma: no cover
-                    with LOCK:
-                        if not event in DEBUG_CONTINUATIONS:
-                            DEBUG_CONTINUATIONS[event] = set((continuation,))
-                        else:
-                            DEBUG_CONTINUATIONS[event].add(continuation)
+        for event in events:
+            if DEBUG: # pragma: no cover
+                with LOCK:
+                    if not event in DEBUG_CONTINUATIONS:
+                        DEBUG_CONTINUATIONS[event] = set((continuation,))
+                    else:
+                        DEBUG_CONTINUATIONS[event].add(continuation)
 
-                with event.__lock:
-                    event.__continuations.add(continuation)
-                    if event.__internal_event.is_set():
-                        event.__notify_continuations()
+            with event.__lock:
+                event.__continuations.add(continuation)
+                if event.__internal_event.is_set():
+                    event.__notify_continuations()
 
 
     def __notify_continuations(self) -> None:
@@ -248,7 +244,7 @@ class Event:
             if timeout and timeout < 0: # pragma: no cover
                 raise ValueError("'timeout' must be a non-negative number")
 
-            if sys.platform == "win32" and current_thread() is main_thread():
+            if sys.platform == "win32" and current_thread() is main_thread(): # pragma: no cover
                 # as stated in https://bugs.python.org/issue35935 python cannot respond to signals
                 # while awaiting events in Windows - to work around this, the waiting is done in 100ms intervals.
                 start_time = time()

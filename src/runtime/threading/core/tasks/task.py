@@ -6,7 +6,7 @@ from typing import (
 
 from runtime.threading.core.threading_exception import ThreadingException
 from runtime.threading.core.interrupt_exception import InterruptException
-from runtime.threading.core.event import Event, terminate_event
+from runtime.threading.core.event import Event
 from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.continue_when import ContinueWhen
 from runtime.threading.core.lock import Lock
