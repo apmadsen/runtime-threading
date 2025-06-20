@@ -58,4 +58,4 @@ class PFilter(PFn[T, T]):
 
     @property
     def is_catch_all(self) -> bool:
-        return self.__catch_all
+        return self.__catch_all # pragma: no cover

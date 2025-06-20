@@ -40,18 +40,18 @@ class PContext():
         scheduler: TaskScheduler | None = None
     ):
         if max_parallelism < 1:
-            raise ValueError("Argument max_parallelism must be greater than 0")
+            raise ValueError("Argument max_parallelism must be greater than 0") # pragma: no cover
 
         with LOCK:
             self.__id = PContext.__current__id__
             PContext.__current__id__ += 1
         self.__max_parallelism = max_parallelism
         self.__scheduler = scheduler or TaskScheduler.default()
-        self.__interrupt_signal = InterruptSignal(interrupt) if interrupt else InterruptSignal()
+        self.__interrupt_signal = InterruptSignal(interrupt) if interrupt is not None else InterruptSignal()
 
     @property
     def id(self) -> int:
-        return self.__id
+        return self.__id # pragma: no cover
 
     @property
     def max_parallelism(self) -> int:
@@ -65,16 +65,16 @@ class PContext():
     def interrupt(self) -> Interrupt:
         return self.__interrupt_signal.interrupt
 
-    @classmethod
-    def root(cls) -> PContext:
+    @staticmethod
+    def root() -> PContext:
         """Returns the root parallel context
         """
         with LOCK:
             stack = PContext.__get_stack()
             return stack[0]
 
-    @classmethod
-    def current(cls) -> PContext:
+    @staticmethod
+    def current() -> PContext:
         """Returns the current parallel context
         """
         with LOCK:
@@ -103,8 +103,8 @@ class PContext():
 
             stack = PContext.__get_stack()
 
-            if not any(stack):
+            if not any(stack): # pragma: no cover
                 raise ParallelException(f"PContext Stack error: Context {self.id} already exited")
-            elif (current := stack.pop() ) and current != self:
+            elif (current := stack.pop() ) and current != self: # pragma: no cover
                 stack.append(current)
                 raise ParallelException(f"PContext Stack error: Context {self.id} exited while nested context is still active")

@@ -9,8 +9,7 @@ from runtime.threading import parallel, ThreadingException, InterruptSignal, Int
 from runtime.threading.parallel import pipeline
 from runtime.threading.concurrent import Queue
 
-
-def test_background():
+def test_background(internals):
     assert parallel.background() is parallel.background()
 
     items = tuple( i for i in range(100))
@@ -42,7 +41,7 @@ def test_background():
     assert items == result
 
 
-def test_process():
+def test_process(internals):
     def fn_process(task: Task[float], item: int) -> Iterable[float]:
         return [2 * item]
 
@@ -72,7 +71,7 @@ def test_process():
         assert facit, result
 
 
-def test_process_error():
+def test_process_error(internals):
     items = [ randint(0, 100000) for _ in range(1000) ]
 
     def fn_process(task: Task[float], item: int) -> Iterable[float]:
@@ -84,7 +83,7 @@ def test_process_error():
         getattr(output, "__next__")()
 
 
-def test_process_cancel():
+def test_process_cancel(internals):
     items = [ randint(0, 100000) for _ in range(1000) ]
     cs = InterruptSignal()
 
@@ -92,17 +91,16 @@ def test_process_cancel():
         assert cs.interrupt.propagates_to(task.interrupt)
         task.interrupt.raise_if_signaled()
         cs.signal()
-        # sleep(0.01)
         yield item * 1.5
 
 
-    output = parallel.process(items, parallelism = 5, interrupt=cs.interrupt).do(fn_process)
+    output = parallel.process(items, parallelism = 3, interrupt=cs.interrupt).do(fn_process)
 
     with assert_raises(InterruptException):
         getattr(output, "__next__")()
 
 
-def test_for_each():
+def test_for_each(internals):
     queue = pipeline.ProducerConsumerQueue[int]()
     def fn(task: Task[Any], s: int) -> None:
         queue.put(s)
@@ -138,7 +136,7 @@ def test_for_each():
         assert facit == vsum
         assert len(items) == count
 
-def test_map():
+def test_map(internals):
     def fn(task: Task[int], s: int) -> Iterable[int]:
         yield s*2
 

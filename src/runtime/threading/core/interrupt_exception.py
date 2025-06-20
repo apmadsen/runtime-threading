@@ -1,6 +1,10 @@
-from runtime.threading.core.interrupt import Interrupt
+from __future__ import annotations
+from typing import TYPE_CHECKING
 
 from runtime.threading.core.threading_exception import ThreadingException
+
+if TYPE_CHECKING:
+    from runtime.threading.core.interrupt import Interrupt
 
 class InterruptException(ThreadingException):
     __slots__ = ["__interrupt"]

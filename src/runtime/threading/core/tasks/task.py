@@ -1,29 +1,24 @@
 from __future__ import annotations
 from typing import (
     Sequence, TypeVar, Concatenate, ClassVar, Generic, Callable,
-    ParamSpec, Any, cast, overload, TYPE_CHECKING
+    ParamSpec, Any, cast, overload
 )
-from weakref import WeakKeyDictionary
 
 from runtime.threading.core.threading_exception import ThreadingException
 from runtime.threading.core.interrupt_exception import InterruptException
-from runtime.threading.core.event import Event
+from runtime.threading.core.event import Event, terminate_event
+from runtime.threading.core.one_time_event import OneTimeEvent
+from runtime.threading.core.continue_when import ContinueWhen
 from runtime.threading.core.lock import Lock
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.tasks.task_state import TaskState
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
-from runtime.threading.core.tasks.continuation import Continuation
-from runtime.threading.core.tasks.continue_when import ContinueWhen
-from runtime.threading.core.tasks.task_continuation import TaskContinuation
 from runtime.threading.core.tasks.tasks_continuation import TasksContinuation
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
 from runtime.threading.core.tasks.task_exception import TaskException
 from runtime.threading.core.tasks.helpers import get_function_name
-
-if TYPE_CHECKING: # pragma: no cover
-    from runtime.threading.core.event import Event
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -35,9 +30,9 @@ TaskCanceledError = TaskException("Task is canceled")
 TaskNotScheduledError = TaskException("Task is not scheduled to start")
 TaskAlreadyRunningError = TaskException("Task is already running")
 TaskAlreadyScheduledError = TaskException("Task is already scheduled (on this or another scheduler)")
+AwaitedTaskCanceledError = TaskException("One or more awaited tasks were canceled")
 
 LOCK = Lock()
-CONTINUATIONS: WeakKeyDictionary[Event, list[Continuation]] = WeakKeyDictionary()
 
 class TaskProto:
     __slots__ = [ "__name", "__interrupt", "__scheduler", "__lazy" ]
@@ -96,7 +91,6 @@ class TaskProto:
 
         return Task[T](fn_wrap, self.__name, self.__interrupt, self.__lazy)
 
-
 class ContinuationProto:
     __slots__ = [ "__tasks", "__name", "__interrupt", "__when", "__options" ]
 
@@ -117,8 +111,11 @@ class ContinuationProto:
     def task(self) -> Task[None]:
         continuation = CompletedTask(None)
         setattr(continuation, "_Task__state", TaskState.SCHEDULED)
-        getattr(Task, "_Task__add_continuation")(self.__tasks, TasksContinuation(self.__when, self.__tasks, continuation, self.__options))
 
+        Event.add_continuation(
+            tuple(task.wait_event for task in self.__tasks),
+            TasksContinuation(self.__when, self.__tasks, continuation, self.__options, self.__interrupt)
+        )
         return continuation
 
     def then(
@@ -139,7 +136,11 @@ class ContinuationProto:
         )
 
         setattr(continuation, "_Task__state", TaskState.SCHEDULED)
-        getattr(Task, "_Task__add_continuation")(self.__tasks, TasksContinuation(self.__when, self.__tasks, continuation, self.__options))
+
+        Event.add_continuation(
+            tuple(task.wait_event for task in self.__tasks),
+            TasksContinuation(self.__when, self.__tasks, continuation, self.__options, self.__interrupt)
+        )
 
         return continuation
 
@@ -167,12 +168,12 @@ class Task(Generic[T]):
             Task.__current_id__ += 1
 
         self.__name = name or f"Task_{self.__id}"
-        self.__internal_event = Event()
+        self.__internal_event = OneTimeEvent()
         self.__lock = Lock()
         self.__scheduler: TaskScheduler | None = None
         self.__target = fn
         self.__state: TaskState = TaskState.NOTSTARTED
-        self.__interrupt_signal = InterruptSignal(interrupt) if interrupt else InterruptSignal()
+        self.__interrupt_signal = InterruptSignal(interrupt) if interrupt is not None else InterruptSignal()
         self.__interrupt = self.__interrupt_signal.interrupt
         self.__exception: Exception | None = None
         self.__lazy = lazy
@@ -279,7 +280,7 @@ class Task(Generic[T]):
                 raise cast(Exception, self.__exception)
             elif self.__state == TaskState.FAILED:
                 raise cast(Exception, self.__exception)
-            elif self.__state == TaskState.SCHEDULED:
+            else:
                 pass
 
         self.wait()
@@ -375,11 +376,7 @@ class Task(Generic[T]):
                 self.__exception = ex
                 self.__transition_to(TaskState.FAILED)
         finally:
-            self.__internal_event.set()
-            Task.__notify_continuations(self)
-
-
-
+            self.__internal_event.signal()
 
 
     def cancel(self) -> None:
@@ -417,20 +414,24 @@ class Task(Generic[T]):
     ) -> Task[Tcontinuation]:
         continuation = Task.future(fn, self, *args, **kwargs)
         continuation.__state = TaskState.SCHEDULED
-        Task.__add_continuation([self], TaskContinuation(self, continuation, options))
+
+        Event.add_continuation(
+            (self.wait_event,),
+            TasksContinuation(ContinueWhen.ALL, (self,), continuation, options, self.__interrupt)
+        )
+
         return continuation
 
     def _cancel_and_notify(self) -> None:
         with self.__lock:
             if self.__state == TaskState.NOTSTARTED:
-                raise TaskNotScheduledError
+                raise TaskNotScheduledError # pragma: no cover -- continuation tasks should not be handled directly
             elif self.__state >= TaskState.COMPLETED:
-                raise TaskCompletedError
+                raise TaskCompletedError # pragma: no cover -- continuation tasks should not be handled directly
 
             self.__exception = InterruptException(self.__interrupt)
             self.__transition_to(TaskState.CANCELED)
-            self.__internal_event.set()
-            Task.__notify_continuations(self)
+            self.__internal_event.signal()
 
     def __transition_to(self, state: TaskState) -> None:
         with self.__lock:
@@ -459,7 +460,12 @@ class Task(Generic[T]):
                 del self.__target
 
     @staticmethod
-    def wait_any(tasks: Sequence[Task[Any]], timeout: float | None = None, *, fail_on_cancel: bool = False) -> bool:
+    def wait_any(
+        tasks: Sequence[Task[Any]],
+        timeout: float | None = None, /,
+        fail_on_cancel: bool = False,
+        interrupt: Interrupt | None = None
+    ) -> bool:
         """Waits for any of the tasks to complete
 
         Args:
@@ -477,9 +483,12 @@ class Task(Generic[T]):
 
         events: Sequence[Event] = [ t.__internal_event for t in tasks ]
 
-        if Event.wait_any(events, timeout):
+        if Event.wait_any(events, timeout, interrupt = interrupt):
+            if interrupt and interrupt.is_signaled:
+                return False # pragma no cover
+
             if fail_on_cancel and [ t.__exception for t in tasks if t.__exception if t.is_canceled ]:
-                raise ThreadingException("One or more awaited tasks were canceled")
+                raise AwaitedTaskCanceledError
 
             exceptions = [ t.__exception for t in tasks if t.__exception if t.is_failed ]
 
@@ -487,10 +496,15 @@ class Task(Generic[T]):
                 raise AggregateException(exceptions)
             return True
         else:
-            return False
+            return False # pragma: no cover -- events will be hit eventually
 
     @staticmethod
-    def wait_all(tasks: Sequence[Task[Any]], timeout: float | None = None, *, fail_on_cancel: bool = False) -> bool:
+    def wait_all(
+        tasks: Sequence[Task[Any]],
+        timeout: float | None = None, /,
+        fail_on_cancel: bool = False,
+        interrupt: Interrupt | None = None
+    ) -> bool:
         """Waits for all of the tasks to complete
 
         Args:
@@ -507,9 +521,13 @@ class Task(Generic[T]):
         """
 
         events: Sequence[Event] = [ t.__internal_event for t in tasks ]
-        if Event.wait_all(events, timeout):
+
+        if Event.wait_all(events, timeout, interrupt = interrupt):
+            if interrupt and interrupt.is_signaled:
+                return False # pragma no cover
+
             if fail_on_cancel and [ t.__exception for t in tasks if t.__exception if t.is_canceled ]:
-                raise ThreadingException("One or more awaited tasks were canceled")
+                raise AwaitedTaskCanceledError
 
             exceptions = [ t.__exception for t in tasks if t.__exception if t.is_failed ]
 
@@ -517,7 +535,7 @@ class Task(Generic[T]):
                 raise AggregateException(exceptions)
             return True
         else:
-            return False
+            return False # pragma: no cover -- events will be hit eventually
 
     @staticmethod
     def with_any(
@@ -537,43 +555,6 @@ class Task(Generic[T]):
     ) -> ContinuationProto:
         return ContinuationProto(tasks, ContinueWhen.ALL, options = options, interrupt = interrupt)
 
-
-    @staticmethod
-    def __add_continuation(tasks: Sequence[Task[Any]], continuation: Continuation) -> None:
-        with LOCK:
-            already_complete: Sequence[Task[Any]] = []
-            for task in tasks:
-                if task.is_completed:
-                    already_complete.append(task)
-
-                if task.wait_event not in CONTINUATIONS:
-                    CONTINUATIONS[task.wait_event] = [continuation]
-                else:
-                    CONTINUATIONS[task.wait_event].append(continuation)
-
-            for task in already_complete:
-                Task.__notify_continuations(task)
-
-
-    @staticmethod
-    def __notify_continuations(task: Task[Any]) -> None:
-        with LOCK:
-            if task.wait_event in CONTINUATIONS:
-                expedited: list[Continuation] = []
-
-                for continuation in list(CONTINUATIONS[task.wait_event]):
-                    if continuation.try_continue():
-                        expedited.append(continuation)
-                        CONTINUATIONS[task.wait_event].remove(continuation)
-
-                for continuation in expedited:
-                    for continution_event in continuation.events:
-                        if continution_event in CONTINUATIONS:
-                            if continuation in CONTINUATIONS[continution_event]:
-                                CONTINUATIONS[continution_event].remove(continuation)
-
-                            if len(CONTINUATIONS[continution_event]) == 0:
-                                del CONTINUATIONS[continution_event]
 
     @staticmethod
     def create(
@@ -639,3 +620,19 @@ class CompletedTask(Task[T]):
 
         super().__init__(empty_target)
 
+
+def run_after(
+    time: float,
+    interrupt: Interrupt | None,
+    fn: Callable[Concatenate[Task[Tresult], P], Tresult], /,
+    *args: P.args,
+    **kwargs: P.kwargs
+) -> Task[Tresult]:
+
+    def fn_sleep(task: Task[Any]) -> None:
+        terminate_event.wait(time)
+
+    def fn_continue(task: Task[Any], other: Task[Any], *args: P.args, **kwargs: P.kwargs) -> None:
+        fn(task, *args, **kwargs)
+
+    return Task.create(interrupt=interrupt).run(fn_sleep).continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue, *args, **kwargs)

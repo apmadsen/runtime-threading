@@ -32,4 +32,4 @@ class PIterable(Iterable[T], Protocol):
 
 
     def __iter__(self) -> PIterator[T]:
-        ...
+        ... # pragma: no cover

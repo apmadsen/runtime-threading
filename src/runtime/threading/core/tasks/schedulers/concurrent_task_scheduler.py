@@ -9,7 +9,7 @@ from runtime.threading.core.threading_exception import ThreadingException
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler, TaskAlreadyStartedOrScheduledError, SchedulerClosedError
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.task_state import TaskState
-from runtime.threading.core.event import Event
+from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.concurrent.queue import Queue
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.tasks.config import TASK_KEEP_ALIVE
@@ -43,7 +43,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
         self.__active_threads: MutableSequence[Thread] = []
         self.__suspended_threads: MutableSequence[Thread] = []
         self.__close = InterruptSignal()
-        self.__closed: Event | None = None
+        self.__closed: OneTimeEvent | None = None
 
     @property
     def is_closed(self) -> bool:
@@ -87,7 +87,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
             task (Task): The task to schedule
         """
         with self.synchronization_lock:
-            if self.__closed:
+            if self.__closed is not None:
                 raise SchedulerClosedError
 
             if len(self.__active_threads) < self.__max_parallelism:
@@ -104,7 +104,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
             task (Task): The task to run
         """
         with self.synchronization_lock:
-            if self.__closed:
+            if self.__closed is not None:
                 raise SchedulerClosedError # pragma: no cover
 
             if task.state > TaskState.SCHEDULED or ( task.state == TaskState.SCHEDULED and task not in self.__queue ):
@@ -178,11 +178,11 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
         wait_for_close = False
         with self.synchronization_lock:
-            self.__closed = Event()
+            self.__closed = OneTimeEvent()
             self.__close.signal()
             wait_for_close = self.threads > 0
 
-        if self.__closed and wait_for_close:
+        if wait_for_close:
             self.__closed.wait()
 
 
@@ -240,8 +240,8 @@ class ConcurrentTaskScheduler(TaskScheduler):
         finally:
             with self.synchronization_lock:
                 self._unregister()
-                if self.__closed and len(self.__threads) == 0:
-                    self.__closed.set()
+                if self.__closed is not None and len(self.__threads) == 0:
+                    self.__closed.signal()
 
 
 

@@ -22,6 +22,9 @@ class TaskScheduler(ABC):
     def __init__(self):
         self.__lock = RLock()
 
+    @property
+    def id(self) -> int:
+        return id(self)
 
     @property
     def synchronization_lock(self) -> RLock:
@@ -111,7 +114,7 @@ class TaskScheduler(ABC):
         if cur_thread != main_thread():
             cur_thread.name = task.name
         else:
-            pass  # pragma: no cover
+            pass
 
     def _refresh_task(self) -> None:
         """Refreshes task info, like the name.
@@ -122,9 +125,9 @@ class TaskScheduler(ABC):
                 if cur_thread != main_thread():
                     cur_thread.name = cur_task.name
                 else:
-                    pass  # pragma: no cover
+                    pass
         else:
-            pass # pragma: no cover
+            pass
 
     def _unregister(self) -> None:
         """Un-registers the current thread on the task scheduler

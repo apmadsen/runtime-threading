@@ -9,7 +9,7 @@ from runtime.threading.tasks import AggregateException
 from runtime.threading.parallel import distribute
 from runtime.threading.parallel.pipeline import ProducerConsumerQueue
 
-def test_basics():
+def test_basics(internals):
     queue = ProducerConsumerQueue[str]()
     dist = distribute(queue.get_iterator())
     outputs: List[Iterable[str]] = []
@@ -36,7 +36,7 @@ def test_basics():
     for output in outputs:
         assert facit == sorted(output)
 
-def test_cancellation():
+def test_cancellation(internals):
     signal = InterruptSignal()
     queue = ProducerConsumerQueue[str]()
     dist = distribute(queue.get_iterator())

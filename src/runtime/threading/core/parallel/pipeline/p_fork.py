@@ -16,7 +16,6 @@ Tout = TypeVar("Tout")
 class PFork(PFn[Tin, Tout]):
     __slots__ = ["__fns", "__tasks", "__queue_out", "__queues"]
 
-    # @overload
     def __init__(self, fns: Sequence[PFn[Tin, Tout]]):
         """Creates a new parallel forked function
 
@@ -34,6 +33,8 @@ class PFork(PFn[Tin, Tout]):
             items = self._parent(items)
         elif not isinstance(items, PIterable):
             items = ProducerConsumerQueue[Tin](items).get_iterator()
+        else:
+            pass
 
         self.__queues = [ (fn, ProducerConsumerQueue[Tin]()) for fn in self.__fns ]
         self.__queue_out = ProducerConsumerQueue[Tout]()
@@ -61,6 +62,8 @@ class PFork(PFn[Tin, Tout]):
                 exception = cast(Exception, failed_task.exception)
                 if isinstance(exception, AggregateException):
                     exception = exception.flatten()
+                else:
+                    pass
 
                 exceptions.append(exception)
 

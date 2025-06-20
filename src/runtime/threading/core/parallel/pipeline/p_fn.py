@@ -14,7 +14,6 @@ Tin = TypeVar("Tin", covariant=True)
 Tout = TypeVar("Tout", covariant=True)
 Tnext = TypeVar("Tnext", covariant=True)
 
-
 class PFn(Generic[Tin, Tout]):
     __slots__ = ["__fn", "_parent", "_parallelism"]
 
@@ -52,25 +51,16 @@ class PFn(Generic[Tin, Tout]):
             if 1 >= parallelism > 0:
                 self._parallelism = parallelism
             else:
-                raise ParallelException("Parallelism must be a float between 0.0 and 1.0")
+                raise ValueError("Parallelism must be a float between 0.0 and 1.0") # pragma: no cover
         else:
             if 32 >= parallelism > 0:
                 self._parallelism = parallelism
             else:
-                raise ParallelException("Parallelism must be an int between 1 and 32")
-
-    def _invoke(self, items: Iterable[Tin], task: Task[Any]) -> Iterable[Tout]:
-        if not self.__fn:
-            raise ParallelException("Parallel function is NULL")
-
-        items = self._parent._invoke(items, task) if self._parent else items
-        for item in items:
-            for result in self.__fn(task, item):
-                yield result
+                raise ValueError("Parallelism must be an int between 1 and 32") # pragma: no cover
 
     def __call__(self, items: PIterable[Tin] | Iterable[Tin]) -> PIterable[Tout]:
         if not self.__fn:
-            raise ParallelException("Parallel function is NULL")
+            raise ParallelException("Parallel function is NULL") # pragma: no cover
 
         pc = PContext.current()
         output = process(
@@ -85,7 +75,7 @@ class PFn(Generic[Tin, Tout]):
 
     def _output(self, items: Iterable[Tin], output_queue: ProducerConsumerQueue[Tout]) -> Task[Any]:
         if not self.__fn:
-            raise ParallelException("Parallel function is NULL")
+            raise ParallelException("Parallel function is NULL") # pragma: no cover
 
         pc = PContext.current()
         return process(
@@ -127,19 +117,6 @@ class PFn(Generic[Tin, Tout]):
         next = self._convert_next(next)
         next._parent = self
         return cast(PFn[Tin, Tnext], next)
-
-
-    # @classmethod
-    # def chain(cls, fns: List[PFn[T, T]]) -> PFn[T, T]:
-    #     result: PFn[T, T] | None = None
-
-    #     for fn in fns:
-    #         if result:
-    #             result = result | fn
-    #         else:
-    #             result = fn
-
-    #     return cast(PFn[T, T], result)
 
 
 class NullPFn(PFn[Any, Any]):

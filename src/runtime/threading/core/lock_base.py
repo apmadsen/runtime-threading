@@ -1,6 +1,6 @@
 from __future__ import annotations
 from threading import RLock, Lock as TLock, Semaphore
-from typing import overload, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from types import TracebackType
 from datetime import datetime
 
@@ -8,6 +8,10 @@ from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVA
 
 if TYPE_CHECKING: # pragma: no cover
     from runtime.threading.core.interrupt import Interrupt
+
+LOCK = RLock()
+DEBUG = False
+DEBUG_INT_WAITS: dict[RLock | TLock | Semaphore, int] = {}
 
 class LockBase:
     __slots__ = ["__lock"]
@@ -20,34 +24,50 @@ class LockBase:
         timeout: float | None = None,
         interrupt: Interrupt | None = None
     ) -> bool:
-        start_time = datetime.now()
-        if timeout and timeout < 0: # pragma: no cover
-            raise ValueError("'timeout' must be a non-negative number")
+        try:
+            if DEBUG:
+                with LOCK:
+                    if not self.__lock in DEBUG_INT_WAITS:
+                        DEBUG_INT_WAITS[self.__lock] = 1
+                    else:
+                        DEBUG_INT_WAITS[self.__lock] += 1
 
-        if interrupt:
-            interrupt.raise_if_signaled()
+            start_time = datetime.now()
+            if timeout and timeout < 0: # pragma: no cover
+                raise ValueError("'timeout' must be a non-negative number")
 
-        if timeout != None and timeout <= TASK_SUSPEND_AFTER:
-            return self.__lock.acquire(True, timeout)
-        else:
-            if self.__lock.acquire(True, TASK_SUSPEND_AFTER):
-                return True
-            elif timeout:
-                timeout -= TASK_SUSPEND_AFTER
+            if interrupt is not None:
+                interrupt.raise_if_signaled()
 
-        from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
-        with TaskScheduler.current().suspend():
-            if interrupt:
-                while not interrupt.is_signaled:
-                    if self.__lock.acquire(True, min(POLL_INTERVAL, timeout or POLL_INTERVAL)):
-                        return True
-                    elif timeout and (datetime.now()-start_time).total_seconds() >= timeout:
-                        return False
-
-                interrupt.raise_if_signaled() # pragma: no cover
-                return False # pragma: no cover
+            if timeout != None and timeout <= TASK_SUSPEND_AFTER:
+                return self.__lock.acquire(True, timeout)
             else:
-                return self.__lock.acquire(True, timeout or -1)
+                if self.__lock.acquire(True, TASK_SUSPEND_AFTER):
+                    return True
+                elif timeout:
+                    timeout -= TASK_SUSPEND_AFTER
+
+            from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+            with TaskScheduler.current().suspend():
+                if interrupt is not None:
+                    while not interrupt.is_signaled:
+                        if self.__lock.acquire(True, min(POLL_INTERVAL, timeout or POLL_INTERVAL)):
+                            return True
+                        elif timeout and (datetime.now()-start_time).total_seconds() >= timeout:
+                            return False
+
+                    interrupt.raise_if_signaled() # pragma: no cover
+                    return False # pragma: no cover
+                else:
+                    return self.__lock.acquire(True, timeout or -1)
+
+        finally:
+            if DEBUG:
+                with LOCK:
+                    if DEBUG_INT_WAITS[self.__lock] == 1:
+                        del DEBUG_INT_WAITS[self.__lock]
+                    else:
+                        DEBUG_INT_WAITS[self.__lock] -= 1
 
 
     def release(self):

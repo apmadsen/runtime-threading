@@ -36,7 +36,7 @@ class Queue(Iterable[T]):
             if not self.__tail:
                 self.__tail = self.__head
 
-        self.__event.set()
+        self.__event.signal()
 
     def requeue(self, item: T) -> None:
         with self.__lock:
@@ -47,7 +47,7 @@ class Queue(Iterable[T]):
             if not self.__head:
                 self.__head = self.__tail
 
-        self.__event.set()
+        self.__event.signal()
 
     def try_dequeue(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> tuple[T | None, bool]:
         """Tries to dequeue an item. If queue is empty, return
@@ -99,7 +99,7 @@ class Queue(Iterable[T]):
             if success:
                 return cast(T, result)
             elif self.__event.wait(timeout, interrupt):
-                if interrupt:
+                if interrupt is not None:
                     interrupt.raise_if_signaled()
             else:
                 raise TimeoutError

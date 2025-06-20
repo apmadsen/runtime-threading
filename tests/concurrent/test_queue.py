@@ -1,3 +1,4 @@
+# pyright: basic
 from typing import Iterable, Any, cast
 
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
@@ -5,7 +6,7 @@ from runtime.threading.tasks import Task, ContinuationOptions
 from runtime.threading import InterruptSignal, Interrupt
 from runtime.threading.concurrent import Queue
 
-def test_basics():
+def test_basics(internals):
     queue = Queue[int]()
     facit = [ i for i in range(5) ]
 
@@ -36,7 +37,7 @@ def test_basics():
     assert result == list(reversed(facit))
 
 
-def test_queue():
+def test_queue(internals):
     count = 100
 
     for parallelism_in in [2,4,8]:

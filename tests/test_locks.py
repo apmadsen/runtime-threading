@@ -2,14 +2,17 @@
 from pytest import raises as assert_raises, fixture
 from typing import Any, cast
 from time import sleep
-from threading import Event, Lock as IntLock
+from threading import Event as IntEvent, Lock as IntLock
 
 from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER
 from runtime.threading.tasks import Task
-from runtime.threading import InterruptSignal, Interrupt, InterruptException
-from runtime.threading import Lock, Semaphore, acquire_or_fail
+from runtime.threading import InterruptSignal, Event, Interrupt, InterruptException, Lock, Semaphore, acquire_or_fail
 
-def test_lock_sync():
+from tests.shared_functions import (
+    fn_acquire_signal_and_sleep, fn_signal_after_time
+)
+
+def test_lock_sync(internals):
     l1 = Lock()
     assert l1.acquire()
     assert l1.acquire()
@@ -30,7 +33,7 @@ def test_lock_sync():
         l2.acquire(0.1, interrupt = signal.interrupt)
 
 
-def test_semaphore_sync():
+def test_semaphore_sync(internals):
     l2 = Semaphore(2)
     assert l2.acquire()
     assert l2.acquire()
@@ -47,16 +50,11 @@ def test_semaphore_sync():
         l2.release()
 
 
-def test_lock_async():
-    def lock(task: Task[Any], lock: Lock, locked_event: Event, t: float) -> None:
-        with lock:
-            locked_event.set()
-            sleep(t)
-
+def test_lock_async(internals):
     l1 = Lock()
     locked_event = Event()
 
-    Task.run(lock, l1, locked_event, TASK_SUSPEND_AFTER+0.1)
+    Task.run(fn_acquire_signal_and_sleep, l1, locked_event, TASK_SUSPEND_AFTER+0.1)
     locked_event.wait()
     assert not l1.acquire(0)
     assert l1.acquire()
@@ -64,7 +62,7 @@ def test_lock_async():
     l2 = Lock(False)
     locked_event.clear()
     signal = InterruptSignal()
-    Task.run(lock, l2, locked_event, TASK_SUSPEND_AFTER+0.1)
+    Task.run(fn_acquire_signal_and_sleep, l2, locked_event, TASK_SUSPEND_AFTER+0.1)
     locked_event.wait()
     assert l2.acquire(1, interrupt = signal.interrupt)
 
@@ -73,52 +71,30 @@ def test_lock_async():
     # signal = InterruptSignal()
     # Task.run(lock, l3, locked_event, TASK_SUSPEND_AFTER*3)
 
-    # def signal_after(task: Task[Any], signal: InterruptSignal, t: float) -> None:
-    #     sleep(t)
-    #     signal.signal()
-
-    # Task.run(signal_after, signal, TASK_SUSPEND_AFTER)
+    # Task.run(fn_signal_after_time, signal, TASK_SUSPEND_AFTER)
 
     # locked_event.wait()
     # with assert_raises(InterruptException):
     #     l3.acquire(TASK_SUSPEND_AFTER+0.2, interrupt = signal.interrupt)
 
-# def test_semaphore_async():
-#     def lock(task: Task[Any], lock: Semaphore, locked_event: Event, t: float) -> None:
-#         with lock:
-#             locked_event.set()
-#             sleep(t)
-
+# def test_semaphore_async(internals):
 #     l1 = Semaphore()
 #     locked_event = Event()
 
-#     Task.run(lock, l1, locked_event, TASK_SUSPEND_AFTER+0.1)
+#     Task.run(fn_acquire_signal_and_sleep, l1, locked_event, TASK_SUSPEND_AFTER+0.1)
 #     locked_event.wait()
 #     assert not l1.acquire(0)
 #     assert l1.acquire(TASK_SUSPEND_AFTER*2)
 
 
-def test_lock_async_cancellation():
+def test_lock_async_cancellation(internals):
     cs = InterruptSignal()
-    def lock(task: Task[Any], lock: Lock, locked_event: Event, t: float) -> None:
-        with lock:
-            # print("lock")
-            locked_event.set()
-            sleep(t)
-        # print("unlock")
-
-    def cancel_after(task: Task[Any], cs: InterruptSignal, t: float) -> None:
-        sleep(t)
-        cs.signal()
-        # print("cancel")
-
-
     l1 = Lock()
     locked_event = Event()
 
-    Task.run(lock, l1, locked_event, 0.1)
+    Task.run(fn_acquire_signal_and_sleep, l1, locked_event, 0.1)
     locked_event.wait()
-    Task.run(cancel_after, cs, 0.01)
+    Task.run(fn_signal_after_time, cs, 0.01)
     assert not l1.acquire(0, interrupt=cs.interrupt)
     sleep(0.05)
     with assert_raises(InterruptException):
@@ -126,16 +102,7 @@ def test_lock_async_cancellation():
     sleep(0.1)
     assert l1.acquire()
 
-
-
-
-
-def test_acquire_or_fail():
-    def lock(task: Task[Any], lock: Lock, locked_event: Event, t: float) -> None:
-        with lock:
-            locked_event.set()
-            sleep(t)
-
+def test_acquire_or_fail(internals):
     l1 = Lock(False)
     locked_event = Event()
     int_lock = cast(IntLock, getattr(l1, "_LockBase__lock")) # requires lock to be a normal Lock (ie. "Lock(False)"), not an RLock
@@ -145,7 +112,7 @@ def test_acquire_or_fail():
 
     assert not int_lock.locked()
 
-    Task.run(lock, l1, locked_event, TASK_SUSPEND_AFTER+0.01)
+    Task.run(fn_acquire_signal_and_sleep, l1, locked_event, TASK_SUSPEND_AFTER+0.01)
     locked_event.wait()
 
     assert int_lock.locked()

@@ -1,6 +1,7 @@
 from typing import TypeVar, Generic, Iterable, Any, cast
 
-from runtime.threading.core.auto_clear_event import AutoClearEvent as Event
+from runtime.threading.core.event import Event
+from runtime.threading.core.auto_clear_event import AutoClearEvent
 from runtime.threading.core.concurrent.queue import Queue
 from runtime.threading.core.parallel.parallel_exception import ParallelException
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable, PIterator
@@ -26,7 +27,7 @@ class ProducerConsumerQueue(Generic[T]):
         """Creates a new ProducerConsumerQueue
         """
         self.__queue: Queue[T] = Queue()
-        self.__notify_event = Event()
+        self.__notify_event = AutoClearEvent()
         self.__is_complete = False
         self.__is_failed = False
         self.__is_async = False
@@ -38,13 +39,13 @@ class ProducerConsumerQueue(Generic[T]):
 
                 def complete(task_in: Task[Any], task: Task[T]):
                     self.__is_complete = True
-                    self.__notify_event.set()
+                    self.__notify_event.signal()
 
                 self.put_many_async(cast(Iterable[T], data)).continue_with(ContinuationOptions.DEFAULT, complete)
             else:
                 self.put_many(data)
                 self.__is_complete = True
-                self.__notify_event.set()
+                self.__notify_event.signal()
 
     @property
     def is_complete(self) -> bool:
@@ -84,7 +85,7 @@ class ProducerConsumerQueue(Generic[T]):
             raise QueueCompletedError
 
         self.__queue.enqueue(item)
-        self.__notify_event.set()
+        self.__notify_event.signal()
 
     def put_many(self, items: Iterable[T]) -> None:
         """Puts items into the queue
@@ -99,7 +100,7 @@ class ProducerConsumerQueue(Generic[T]):
 
         for item in items:
             self.__queue.enqueue(item)
-            self.__notify_event.set()
+            self.__notify_event.signal()
 
     def put_many_async(self, items: Iterable[T]) -> Task[Any]:
         """Puts items into the queue asynchronously
@@ -110,12 +111,12 @@ class ProducerConsumerQueue(Generic[T]):
         def async_fill(task: Task[Any]):
             for item in items:
                 self.__queue.enqueue(item)
-                self.__notify_event.set()
-            self.__notify_event.set()
+                self.__notify_event.signal()
+            self.__notify_event.signal()
 
         return Task.run(async_fill)
 
-    def try_take(self, timeout: float | None = 0, interrupt: Interrupt | None = None) -> tuple[T | None, bool]:
+    def try_take(self, timeout: float | None = 0, /, interrupt: Interrupt | None = None) -> tuple[T | None, bool]:
         """Tries to take an item from the queue.
 
         Args:
@@ -138,15 +139,15 @@ class ProducerConsumerQueue(Generic[T]):
             except TimeoutError:
                 if self.is_complete:
                     # if queue was completed in another thread, it may not be empty at this point,
-                    # so we need to run iteration one more time
+                    # so we need to run iteration one more time just to make sure
                     if not was_empty:
                         was_empty = True
                     else:
                         return None, False
                 elif timeout == 0 or not self.__notify_event.wait(timeout, interrupt):
                     raise TimeoutError
-                elif interrupt:
-                    interrupt.raise_if_signaled()
+                elif interrupt is not None:
+                    interrupt.raise_if_signaled() # pragma: no cover
 
 
 
@@ -159,7 +160,7 @@ class ProducerConsumerQueue(Generic[T]):
             raise QueueCompletedError
 
         self.__is_complete = True
-        self.__notify_event.set()
+        self.__notify_event.signal()
 
 
     def fail(self, error: Exception) -> None:
@@ -185,7 +186,7 @@ class ProducerConsumerQueue(Generic[T]):
         self.__fail = error
         self.__is_complete = True
         self.__is_failed = True
-        self.__notify_event.set()
+        self.__notify_event.signal()
 
 
     def get_iterator(self) -> PIterable[T]:

@@ -69,7 +69,6 @@ class Distributor(Generic[T]):
             for queue in self.__queues_out:
                 queue.fail(AggregateException(exceptions))
 
-        print(f"{id(interrupt)}")
         tasks = [ for_each(self.__queue_in, interrupt = interrupt).do(distribute) ]
 
 

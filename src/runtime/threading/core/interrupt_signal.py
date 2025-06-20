@@ -22,11 +22,6 @@ class InterruptSignal:
     def __init__(self, *linked_interrupts: Interrupt):
         self.__interrupt, self.__interrupt_fn = Interrupt._create(*linked_interrupts) # pyright: ignore[reportPrivateUsage]
 
-    @property
-    def is_signaled(self) -> bool:
-        """Indicates if Interrupt has been signaled
-        """
-        return self.__interrupt.is_signaled
 
     @property
     def interrupt(self) -> Interrupt:

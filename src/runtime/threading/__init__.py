@@ -1,6 +1,7 @@
 from runtime.threading.core.threading_exception import ThreadingException
 from runtime.threading.core.interrupt_exception import InterruptException
 from runtime.threading.core.event import Event, terminate_event
+from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.auto_clear_event import AutoClearEvent
 from runtime.threading.core.lock import Lock
 from runtime.threading.core.semaphore import Semaphore
@@ -11,6 +12,7 @@ from runtime.threading.core.interrupt import Interrupt
 __all__ = [
     'Event',
     'terminate_event',
+    'OneTimeEvent',
     'AutoClearEvent',
     'Lock',
     'Semaphore',

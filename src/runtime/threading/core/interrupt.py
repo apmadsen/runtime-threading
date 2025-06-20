@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import Callable
+from typing import Callable, cast
 from weakref import WeakSet
 from collections import deque
 
 from runtime.threading.core.event import Event
+from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.lock import Lock
 
 LOCK = Lock()
@@ -17,7 +18,7 @@ class Interrupt:
     def __init__(self):
         self.__lock = Lock()
         self.__signal: int | None = None
-        self.__event = Event()
+        self.__event = OneTimeEvent()
         self.__linked: WeakSet[Interrupt] = WeakSet()
         self.__ex: Exception | None = None
 
@@ -39,6 +40,7 @@ class Interrupt:
         """The internal event, handling signaling
         """
         return self.__event
+
 
     def propagates_to(self, interrupt: Interrupt) -> bool:
         """Indicates if this Interrupt instance is linked to other Interrupt. If true,
@@ -65,7 +67,11 @@ class Interrupt:
         if linked_interrupts:
             with LOCK:
                 for interrupt in linked_interrupts:
-                    interrupt.__linked.add(new_token)
+                    if interrupt.is_signaled: # signal immediately and return
+                        new_token.__set(cast(int, interrupt.signal))
+                        break
+                    else:
+                        interrupt.__linked.add(new_token)
 
         return (new_token, new_token.__set)
 
@@ -74,7 +80,7 @@ class Interrupt:
             from runtime.threading.core.interrupt_exception import InterruptException
             self.__ex = InterruptException(self)
             self.__signal = signal
-            self.__event.set()
+            self.__event.signal()
 
             for interrupt in self.__linked:
                 if not interrupt.is_signaled:

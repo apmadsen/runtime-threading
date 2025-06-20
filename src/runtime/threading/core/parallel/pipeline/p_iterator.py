@@ -8,7 +8,7 @@ T = TypeVar("T", covariant=True)
 class PIterator(Iterator[T], Protocol):
 
     def next(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> T:
-        ...
+        ... # pragma: no cover
 
     def __next__(self) -> T:
         return self.next()

@@ -4,32 +4,35 @@ from pytest import raises as assert_raises, fixture
 from runtime.threading.tasks import AggregateException
 from runtime.threading import InterruptSignal, Interrupt, InterruptException
 
-def test_basic():
+def test_basic(internals):
     cts = InterruptSignal()
     ct = cts.interrupt
     ct.raise_if_signaled()
     assert not ct.wait_event.wait(0)
+    assert not cts.interrupt.is_signaled
     cts.signal()
-    assert cts.is_signaled
+
+    assert cts.interrupt.is_signaled
     assert ct.is_signaled
 
     with assert_raises(InterruptException):
         ct.raise_if_signaled()
+
     assert ct.wait(0)
 
 
-def test_linked():
+def test_linked(internals):
     cts1 = InterruptSignal()
     cts2 = InterruptSignal()
     assert not cts1.interrupt.propagates_to(cts2.interrupt)
     assert not cts2.interrupt.propagates_to(cts1.interrupt)
     cts3 = InterruptSignal(cts1.interrupt, cts2.interrupt)
 
-    assert not cts3.is_signaled
+    assert not cts3.interrupt.is_signaled
 
     cts1.signal()
 
-    assert cts3.is_signaled
+    assert cts3.interrupt.is_signaled
 
     cts2.signal()
     cts3.signal()
@@ -40,11 +43,11 @@ def test_linked():
     cts4 = InterruptSignal(cts3.interrupt)
     cts5 = InterruptSignal(cts4.interrupt)
 
-    assert not cts5.is_signaled
+    assert not cts5.interrupt.is_signaled
 
     cts1.signal()
 
-    assert cts5.is_signaled
+    assert cts5.interrupt.is_signaled
 
     cts1 = InterruptSignal()
     cts2 = InterruptSignal()
@@ -61,7 +64,7 @@ def test_linked():
     assert not cts4.interrupt.propagates_to(cts1.interrupt)
     assert cts3.interrupt.propagates_to(cts7.interrupt)
 
-def test_aggregate_exception():
+def test_aggregate_exception(internals):
     ex1 = Exception("test1")
     ex2 = Exception("test2")
     aex1 = AggregateException((ex1, ex2))

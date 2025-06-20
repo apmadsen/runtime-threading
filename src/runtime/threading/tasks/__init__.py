@@ -1,7 +1,8 @@
 
 from runtime.threading.core.tasks.task import (
     Task, TaskCompletedError, TaskNotScheduledError, TaskCanceledError,
-    TaskAlreadyRunningError, TaskAlreadyScheduledError
+    TaskAlreadyRunningError, TaskAlreadyScheduledError, AwaitedTaskCanceledError,
+    run_after
 )
 from runtime.threading.core.tasks.task_state import TaskState
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
@@ -19,4 +20,6 @@ __all__ = [
     'TaskNotScheduledError',
     'TaskAlreadyRunningError',
     'TaskAlreadyScheduledError',
+    'AwaitedTaskCanceledError',
+    'run_after',
 ]

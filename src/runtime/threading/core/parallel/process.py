@@ -89,11 +89,13 @@ class ProcessProto(Generic[Tin]):
                 exception = canceled_task.exception
                 if isinstance(exception, InterruptException):
                     exceptions[exception.interrupt.signal or 0] = exception
+                else:
+                    pass
 
             if len(exceptions) == 1:
                 queue_out.fail(tuple(exceptions.values())[0])
             else:
-                queue_out.fail(AggregateException(tuple(exceptions.values())))
+                queue_out.fail(AggregateException(tuple(exceptions.values()))) # pragma: no cover -- should never happen sinde underlying tasks will always have the same interrupt
 
         def fail(task: Task[Any], tasks: Sequence[Task[Any]]):
             exceptions: Sequence[Exception] = []

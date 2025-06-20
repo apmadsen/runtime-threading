@@ -1,6 +1,5 @@
 # pyright: basic
 from typing import List, cast
-from time import sleep
 from threading import Thread
 from re import escape
 from random import randint
@@ -9,9 +8,9 @@ from pytest import raises as assert_raises, fixture
 from runtime.threading.parallel.pipeline import ProducerConsumerQueue
 from runtime.threading.parallel import ParallelException
 from runtime.threading.core.parallel.pipeline.producer_consumer_queue import QueueCompletedError, QueueLinkedToAnotherQueueError
+from runtime.threading import InterruptSignal
 
-
-def test_basics():
+def test_basics(internals):
     o = 100
     pcq = ProducerConsumerQueue[int]()
     t = Thread(target=add, args=(pcq, o))
@@ -65,7 +64,7 @@ def test_basics():
         pcq3.try_take()
 
 
-def test_put_many():
+def test_put_many(internals):
     test_items = [ randint(0, 100000) for _ in range(100) ]
     pcq = ProducerConsumerQueue[int]()
     t = Thread(target=add_many, args=(pcq, test_items))
@@ -80,15 +79,16 @@ def test_put_many():
     assert test_items == items
 
 
-def test_take():
+def test_take(internals):
     o = 100
     pcq = ProducerConsumerQueue[int]([ i for i in range(o) ])
 
     items: List[int] = []
+    sig = InterruptSignal()
 
     success = True
     while success:
-        result, success = pcq.try_take()
+        result, success = pcq.try_take(interrupt = sig.interrupt)
         if success:
             items.append(cast(int, result))
 
@@ -114,7 +114,6 @@ def test_take():
 def add(q: ProducerConsumerQueue[int], o: int):
     for i in range(o):
         q.put(i)
-        sleep(0.0001)
     q.complete()
 
 def add_many(q: ProducerConsumerQueue[int], items: List[int]):
