@@ -88,7 +88,7 @@ class ProcessProto(Generic[Tin]):
             for canceled_task in [ task for task in tasks if task.is_canceled ]:
                 exception = canceled_task.exception
                 if isinstance(exception, InterruptException):
-                    exceptions[exception.interrupt.signal or 0] = exception
+                    exceptions[exception.interrupt.signal_id or 0] = exception
                 else:
                     pass
 
@@ -108,14 +108,14 @@ class ProcessProto(Generic[Tin]):
             queue_out.fail(AggregateException(exceptions))
 
 
-        task_success = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).then(success)
-        task_canceled = Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).then(cancel)
-        task_failed = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).then(fail)
+        task_success = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).run(success)
+        task_canceled = Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).run(cancel)
+        task_failed = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(fail)
 
         if not output_queue:
             return queue_out.get_iterator()
         else:
-            return Task.with_any([task_success, task_canceled, task_failed]).task()
+            return Task.with_any([task_success, task_canceled, task_failed]).plan()
 
 def process(
     items: Iterable[Tin], /,

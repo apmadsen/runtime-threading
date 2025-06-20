@@ -31,7 +31,7 @@ class Interrupt:
             return self.__signal is not None
 
     @property
-    def signal(self) -> int | None:
+    def signal_id(self) -> int | None:
         with self.__lock:
             return self.__signal
 
@@ -68,7 +68,7 @@ class Interrupt:
             with LOCK:
                 for interrupt in linked_interrupts:
                     if interrupt.is_signaled: # signal immediately and return
-                        new_token.__set(cast(int, interrupt.signal))
+                        new_token.__set(cast(int, interrupt.signal_id))
                         break
                     else:
                         interrupt.__linked.add(new_token)
@@ -92,10 +92,14 @@ class Interrupt:
         """Raises an InterruptException if signaled.
         """
         with self.__lock:
-            if self.signal is not None and self.__ex:
+            if self.signal_id is not None and self.__ex:
                 raise self.__ex
 
-    def wait(self, timeout: float | None = None) -> bool:
+    def wait(
+        self,
+        timeout: float | None = None, /,
+        interrupt: Interrupt | None = None
+    ) -> bool:
         """Waits for a signal. Same as wait_handle.wait().
         """
-        return self.__event.wait(timeout)
+        return self.__event.wait(timeout, interrupt)

@@ -60,7 +60,7 @@ class BackgroundProto:
                 **kwargs
             )
             for _ in range(parallelism)
-        ]).task()
+        ]).plan()
 
 def background(
     *,

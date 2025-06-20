@@ -67,7 +67,7 @@ class Event:
 
     def wait(
         self,
-        timeout: float | None = None,
+        timeout: float | None = None, /,
         interrupt: Interrupt | None = None,
     ) -> bool:
         """Waits for the event to be signaled
@@ -174,7 +174,7 @@ class Event:
                 events = ( continuation.interrupt.wait_event, *events )
 
             for event in events:
-                if DEBUG:
+                if DEBUG: # pragma: no cover
                     with LOCK:
                         if not event in DEBUG_CONTINUATIONS:
                             DEBUG_CONTINUATIONS[event] = set((continuation,))
@@ -202,7 +202,7 @@ class Event:
                     pass
 
         for continuation in expedited:
-            if DEBUG:
+            if DEBUG: # pragma: no cover
                 with LOCK:
                     if self in DEBUG_CONTINUATIONS and continuation in DEBUG_CONTINUATIONS[self]:
                         DEBUG_CONTINUATIONS[self].remove(continuation)
@@ -210,7 +210,7 @@ class Event:
                 if continuation in self.__continuations: # required because events may remove continuations from other events (further down)
                     self.__continuations.remove(continuation)
 
-        if DEBUG:
+        if DEBUG: # pragma: no cover
             with LOCK:
                 if self in DEBUG_CONTINUATIONS:
                     del DEBUG_CONTINUATIONS[self]
@@ -220,7 +220,7 @@ class Event:
                 continuation_event._after_wait()
                 # remove continuation on any other events as it is not done
                 if continuation in continuation_event.__continuations:
-                    if DEBUG:
+                    if DEBUG: # pragma: no cover
                         with LOCK:
                             if continuation_event in DEBUG_CONTINUATIONS:
                                 DEBUG_CONTINUATIONS[continuation_event].remove(continuation)
@@ -238,7 +238,7 @@ class Event:
     @staticmethod
     def __int_wait(event: TEvent, timeout: float | None = None) -> bool:
         try:
-            if DEBUG:
+            if DEBUG: # pragma: no cover
                 with LOCK:
                     if not event in DEBUG_INT_WAITS:
                         DEBUG_INT_WAITS[event] = 1
@@ -270,7 +270,7 @@ class Event:
                 with TaskScheduler.current().suspend():
                     return event.wait(timeout)
         finally:
-            if DEBUG:
+            if DEBUG: # pragma: no cover
                 with LOCK:
                     if DEBUG_INT_WAITS[event] == 1:
                         del DEBUG_INT_WAITS[event]

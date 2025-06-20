@@ -93,10 +93,10 @@ class PFork(PFn[Tin, Tout]):
             ) for _ in range(parallelism)
         ]
 
-        t_complete = Task.with_all(tasks, options=ContinuationOptions.DEFAULT).then(complete_queues)
-        t_fail = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).then(fail_queues)
-        t_cancel = Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).then(cancel_queues)
+        t_complete = Task.with_all(tasks, options=ContinuationOptions.DEFAULT).run(complete_queues)
+        t_fail = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(fail_queues)
+        t_cancel = Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).run(cancel_queues)
 
-        Task.with_all([ *self.__tasks, *tasks, t_cancel, t_fail, t_complete ], options=ContinuationOptions.DEFAULT).then(complete_queue)
+        Task.with_all([ *self.__tasks, *tasks, t_cancel, t_fail, t_complete ], options=ContinuationOptions.DEFAULT).run(complete_queue)
 
         return self.__queue_out.get_iterator()

@@ -64,6 +64,20 @@ class TaskProto:
         self.__scheduler = scheduler
         self.__lazy = lazy or False
 
+    def plan(
+        self,
+        fn: Callable[Concatenate[Task[T], P], T],
+        *args: P.args,
+        **kwargs: P.kwargs
+    ) -> Task[T]:
+        def fn_wrap(task: Task[T]) -> T:
+            return fn(task, *args, **kwargs)
+
+        if self.__scheduler:
+            raise ThreadingException("Future tasks cannot have scheduler specified") # pragma: no cover
+
+        return Task[T](fn_wrap, self.__name, self.__interrupt, self.__lazy)
+
     def run(
         self,
         fn: Callable[Concatenate[Task[T], P], T], /,
@@ -77,19 +91,21 @@ class TaskProto:
         task.schedule(self.__scheduler or TaskScheduler.current())
         return task
 
-    def future(
+    def run_after(
         self,
+        time: float,
         fn: Callable[Concatenate[Task[T], P], T],
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[T]:
-        def fn_wrap(task: Task[T]) -> T:
+        def fn_sleep(task: Task[Any]) -> None:
+            task.interrupt.wait(time)
+
+        def fn_continue(task: Task[Any], other: Task[Any], *args: P.args, **kwargs: P.kwargs) -> T:
             return fn(task, *args, **kwargs)
 
-        if self.__scheduler:
-            raise ThreadingException("Future tasks cannot have scheduler specified") # pragma: no cover
+        return Task.create(interrupt = self.__interrupt).run(fn_sleep).continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue, *args, **kwargs)
 
-        return Task[T](fn_wrap, self.__name, self.__interrupt, self.__lazy)
 
 class ContinuationProto:
     __slots__ = [ "__tasks", "__name", "__interrupt", "__when", "__options" ]
@@ -108,7 +124,7 @@ class ContinuationProto:
         self.__name = name
         self.__interrupt = interrupt
 
-    def task(self) -> Task[None]:
+    def plan(self) -> Task[None]:
         continuation = CompletedTask(None)
         setattr(continuation, "_Task__state", TaskState.SCHEDULED)
 
@@ -118,7 +134,7 @@ class ContinuationProto:
         )
         return continuation
 
-    def then(
+    def run(
         self,
         fn: Callable[Concatenate[Task[Tresult], Sequence[Task[Any]], P], Tresult], /,
         *args: P.args,
@@ -128,7 +144,7 @@ class ContinuationProto:
         continuation = Task.create(
             name = self.__name or get_function_name(fn),
             interrupt = self.__interrupt
-        ).future(
+        ).plan(
             fn,
             self.__tasks,
             *args,
@@ -365,7 +381,7 @@ class Task(Generic[T]):
             with self.__lock:
                 self.__exception = ex
 
-                if ex.interrupt.signal == self.__interrupt.signal:
+                if ex.interrupt.signal_id == self.__interrupt.signal_id:
                     self.__transition_to(TaskState.CANCELED)
                 # elif ex.interrupt is self.__interrupt:
                 #     self.__transition_to(TaskState.CANCELED)
@@ -389,7 +405,7 @@ class Task(Generic[T]):
 
     def wait(
         self,
-        timeout: float | None = None,
+        timeout: float | None = None, /,
         interrupt: Interrupt | None = None,
     ) -> bool:
         """Waits for the task to complete.
@@ -412,7 +428,7 @@ class Task(Generic[T]):
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[Tcontinuation]:
-        continuation = Task.future(fn, self, *args, **kwargs)
+        continuation = Task.plan(fn, self, *args, **kwargs)
         continuation.__state = TaskState.SCHEDULED
 
         Event.add_continuation(
@@ -566,6 +582,13 @@ class Task(Generic[T]):
     ) -> TaskProto:
         return TaskProto(name, interrupt, scheduler, lazy)
 
+    @staticmethod
+    def plan(
+        fn: Callable[Concatenate[Task[Tresult], P], Tresult], /,
+        *args: P.args,
+        **kwargs: P.kwargs
+    ) -> Task[Tresult]:
+        return TaskProto().plan(fn, *args, **kwargs)
 
     @staticmethod
     def run(
@@ -576,12 +599,13 @@ class Task(Generic[T]):
         return TaskProto().run(fn, *args, **kwargs)
 
     @staticmethod
-    def future(
+    def run_after(
+        time: float,
         fn: Callable[Concatenate[Task[Tresult], P], Tresult], /,
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[Tresult]:
-        return TaskProto().future(fn, *args, **kwargs)
+        return TaskProto().run_after(time, fn, *args, **kwargs)
 
     @staticmethod
     def from_result(result: Tresult) -> Task[Tresult]:
@@ -620,19 +644,3 @@ class CompletedTask(Task[T]):
 
         super().__init__(empty_target)
 
-
-def run_after(
-    time: float,
-    interrupt: Interrupt | None,
-    fn: Callable[Concatenate[Task[Tresult], P], Tresult], /,
-    *args: P.args,
-    **kwargs: P.kwargs
-) -> Task[Tresult]:
-
-    def fn_sleep(task: Task[Any]) -> None:
-        terminate_event.wait(time)
-
-    def fn_continue(task: Task[Any], other: Task[Any], *args: P.args, **kwargs: P.kwargs) -> None:
-        fn(task, *args, **kwargs)
-
-    return Task.create(interrupt=interrupt).run(fn_sleep).continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue, *args, **kwargs)

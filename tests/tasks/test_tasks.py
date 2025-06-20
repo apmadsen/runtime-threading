@@ -25,7 +25,7 @@ T = TypeVar('T')
 
 
 def test_basic(internals):
-    t1 = Task.future(fn_sleep_if_not_canceled, 0.025)
+    t1 = Task.plan(fn_sleep_if_not_canceled, 0.025)
 
     with assert_raises(TaskException, match=escape(str(TaskNotScheduledError))):
         t1.result
@@ -73,7 +73,7 @@ def test_run_synchronously(internals):
         t1.run_synchronously()
 
 
-    t2 = Task.future(fn_sleep_if_not_canceled, 0.025)
+    t2 = Task.plan(fn_sleep_if_not_canceled, 0.025)
     t2.cancel()
 
     with assert_raises(TaskException, match=escape(str(TaskCanceledError))):
@@ -86,7 +86,7 @@ def test_suspend(internals):
         # which should allow t3 to run and start t1, which in turn
         # lets t2 complete
 
-        t1 = Task.future(fn_sleep_if_not_canceled, 0.025)
+        t1 = Task.plan(fn_sleep_if_not_canceled, 0.025)
         t2 = Task.create(scheduler=scheduler).run(fn_wait_for_task_after_time, t1, 0.01)
         t3 = Task.create(scheduler=scheduler).run(fn_schedule_task_after_time, t1, scheduler, 0.1)
 
@@ -98,7 +98,7 @@ def test_suspend(internals):
 
 def test_generic(internals):
     test_str = "test"
-    t = Task.future(fn_return_value_after_time, 0.05, test_str)
+    t = Task.plan(fn_return_value_after_time, 0.05, test_str)
     t.schedule()
     t.wait()
     assert t.result == test_str
@@ -120,8 +120,8 @@ def test_exceptions(internals):
 def test_cancellation(internals):
     cs1 = InterruptSignal()
     cs2 = InterruptSignal()
-    t1 = Task.create(interrupt=cs1.interrupt).future(fn_raise_interrupt_after_time, 0.01)
-    t2 = Task.create(interrupt=cs2.interrupt).future(fn_sleep_if_not_canceled, 0.01)
+    t1 = Task.create(interrupt=cs1.interrupt).plan(fn_raise_interrupt_after_time, 0.01)
+    t2 = Task.create(interrupt=cs2.interrupt).plan(fn_sleep_if_not_canceled, 0.01)
     t1.schedule()
     cs1.signal()
     t2.schedule()
@@ -183,7 +183,7 @@ def test_continuations(internals):
     # might not react as fast as the test requires
 
     test_str = "test"
-    t1 = Task.future(fn_return_value_after_time, 0.005, test_str)
+    t1 = Task.plan(fn_return_value_after_time, 0.005, test_str)
     t2 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state)
     t3 = t2.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_CANCELED, fn_continue_and_return_result_or_state)
     _ = t3.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue_and_return_result_or_state)
@@ -191,7 +191,7 @@ def test_continuations(internals):
     t1.schedule()
 
     cs5 = InterruptSignal()
-    t5 = Task.create(interrupt=cs5.interrupt).future(fn_return_value_after_time, 0.05, test_str)
+    t5 = Task.create(interrupt=cs5.interrupt).plan(fn_return_value_after_time, 0.05, test_str)
     t6 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY, fn_continue_and_return_result_or_state)
     t7 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_CANCELED, fn_continue_and_return_result_or_state)
     t5.schedule()
@@ -205,11 +205,11 @@ def test_continuations(internals):
         t6.result # t6 is implicitly canceled and will throw an exception
 
 
-    t8 = Task.future(fn_return_value_after_time, 0.01, "Task 8 done")
-    t9 = Task[str].future(fn_return_value_after_time, 0.001, "Task 9 done")
-    t10 = Task.with_any([t8, t9]).then(fn_get_first_result_from_tasks)
-    t11 = Task.with_all([t8, t9]).then(fn_get_first_result_from_tasks)
-    t14 = Task.with_all([t8, t9]).then(fn_get_count_of_tasks)
+    t8 = Task.plan(fn_return_value_after_time, 0.01, "Task 8 done")
+    t9 = Task[str].plan(fn_return_value_after_time, 0.001, "Task 9 done")
+    t10 = Task.with_any([t8, t9]).run(fn_get_first_result_from_tasks)
+    t11 = Task.with_all([t8, t9]).run(fn_get_first_result_from_tasks)
+    t14 = Task.with_all([t8, t9]).run(fn_get_count_of_tasks)
     t8.schedule()
     t9.schedule()
     Task.wait_all([t10, t11])
@@ -264,7 +264,7 @@ def test_continuations(internals):
 
     t16 = Task.with_any([
         Task.run(fn_return_value_after_time, 0.1, "Task 121 done"),
-    ], interrupt=signal.interrupt).then(fn_get_count_of_tasks)
+    ], interrupt=signal.interrupt).run(fn_get_count_of_tasks)
     signal.signal()
     t16.wait()
 
@@ -275,8 +275,8 @@ def test_continuations(internals):
 
 def test_lazy_task(internals):
     test_str = "test"
-    t1 = Task.create(lazy=True).future(fn_return_value_after_time, 0.005, test_str)
-    t2 = Task.create(lazy=True).future(fn_return_value_after_time, 0.005, test_str)
+    t1 = Task.create(lazy=True).plan(fn_return_value_after_time, 0.005, test_str)
+    t2 = Task.create(lazy=True).plan(fn_return_value_after_time, 0.005, test_str)
     assert not t1.is_scheduled
     assert not t1.is_completed
     assert t1.is_lazy
@@ -289,3 +289,7 @@ def test_lazy_task(internals):
     assert t2.is_completed
     assert result == test_str
 
+
+def test_run_after(internals):
+    t1 = Task.run_after(0.01, fn_return_value_after_time, 0, "test")
+    assert t1.result == "test"

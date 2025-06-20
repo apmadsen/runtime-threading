@@ -35,7 +35,7 @@ def baseline_queue():
 
                     Task.with_all([
                         Task.create(scheduler=scheduler_in).run(put1) for _ in range(parallelism_in)
-                    ], options=ContinuationOptions.DEFAULT).then(put1done)
+                    ], options=ContinuationOptions.DEFAULT).run(put1done)
                     Task.wait_all(tasks1)
 
                     t1 = datetime.now()-ts
@@ -63,7 +63,7 @@ def baseline_queue():
 
                     Task.with_all([
                         Task.create(scheduler=scheduler_in).run(put2) for _ in range(parallelism_in)
-                    ], options=ContinuationOptions.DEFAULT).then(put2done)
+                    ], options=ContinuationOptions.DEFAULT).run(put2done)
                     Task.wait_all(tasks2)
 
                     t2 = datetime.now()-ts

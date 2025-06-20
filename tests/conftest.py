@@ -10,8 +10,7 @@ from runtime.threading.core.tasks.schedulers.task_scheduler import LOCK as TASK_
 from runtime.threading.core.tasks.schedulers.concurrent_task_scheduler import ConcurrentTaskScheduler
 from runtime.threading.core.event import LOCK as EVENT_LOCK, DEBUG_CONTINUATIONS, DEBUG_INT_WAITS
 from runtime.threading.core.lock_base import LOCK as LOCK_LOCK, DEBUG_INT_WAITS as LOCK_DEBUG_INT_WAITS
-from runtime.threading.tasks import Task, run_after
-from runtime.threading import InterruptSignal
+
 
 def report():
     print("\n")
@@ -64,12 +63,13 @@ def report_tasks():
             print("\n-- TASKS:")
             for scheduler, (thread, task) in schedulers.items():
                 print(f"\tSCHEDULER {scheduler.id} :")
-                if isinstance(scheduler, ConcurrentTaskScheduler):
-                    threads = cast(tuple[Thread], getattr(scheduler, "_ConcurrentTaskScheduler__active_threads"))
-                    for thread in threads:
-                        target = get_function_name(getattr(thread, "_target"))
-                        if not target.endswith("concurrent_task_scheduler.__run"):
-                            x=0
+                # if isinstance(scheduler, ConcurrentTaskScheduler):
+                #     threads = cast(tuple[Thread], getattr(scheduler, "_ConcurrentTaskScheduler__active_threads"))
+                #     for thread in threads:
+                #         if hasattr(thread, "_target"):
+                #             target = get_function_name(getattr(thread, "_target"))
+                #             if not target.endswith("concurrent_task_scheduler.__run"):
+                #                 x=0
 
                 if task:
                     print(f"\t {thread.name} ->")

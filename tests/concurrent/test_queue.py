@@ -61,7 +61,7 @@ def test_queue(internals):
 
                     Task.with_all([
                         Task.create(scheduler=scheduler_in).run(put1) for _ in range(parallelism_in)
-                    ], options=ContinuationOptions.DEFAULT).then(put1done)
+                    ], options=ContinuationOptions.DEFAULT).run(put1done)
                     Task.wait_all(tasks1)
 
 

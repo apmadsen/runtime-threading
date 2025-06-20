@@ -20,7 +20,7 @@ def test_concurrent_task_scheduler(internals):
 
         tasks_list: List[Task[Any]] = []
         for _ in range(10):
-            t = Task.future(fn_return_value_after_time, 0.1, "abc")
+            t = Task.plan(fn_return_value_after_time, 0.1, "abc")
             tasks_list.append(t)
             t.schedule(ts)
             sleep(0.01)
@@ -36,14 +36,14 @@ def test_concurrent_task_scheduler(internals):
     with assert_raises(ThreadingException, match="Task scheduler has been closed"):
         ts = ConcurrentTaskScheduler(4, 0.05)
         ts.close()
-        t = Task.future(fn_return_value_after_time, 0.1, "def")
+        t = Task.plan(fn_return_value_after_time, 0.1, "def")
         t.schedule(ts)
 
 
 def test_concurrent_task_scheduler_suspension(internals):
     with ConcurrentTaskScheduler(2, 0.05) as ts:
         sig = InterruptSignal()
-        t1 = Task.future(fn_return_value_after_time, 0.1, "ghi")
+        t1 = Task.plan(fn_return_value_after_time, 0.1, "ghi")
 
         t2 = Task.run(fn_interrupt_and_wait_for_task, sig, t1)
         sig.interrupt.wait_event.wait()
@@ -54,7 +54,7 @@ def test_concurrent_task_scheduler_suspension(internals):
 
 def test_concurrent_task_scheduler_prioritise(internals):
     with ConcurrentTaskScheduler(2, 0.05) as ts:
-        t1 = Task.create(lazy=True).future(fn_return_value, 22)
+        t1 = Task.create(lazy=True).plan(fn_return_value, 22)
         assert not t1.is_completed
         assert not t1.is_scheduled
         assert t1.result == 22
@@ -63,21 +63,21 @@ def test_concurrent_task_scheduler_prioritise(internals):
         def fn2(task: Task[int], other: Task[int]) -> int:
             return other.result
 
-        t2 = Task.create(lazy=True).future(fn_return_value, 22)
+        t2 = Task.create(lazy=True).plan(fn_return_value, 22)
         assert not t2.is_completed
         assert not t2.is_scheduled
         t3 = Task.create(scheduler=ts).run(fn2, t2)
         assert t3.result == 22
 
-        t4 = Task.create(lazy=True).future(fn_return_value, 33)
+        t4 = Task.create(lazy=True).plan(fn_return_value, 33)
         assert not t4.is_scheduled
         ts.prioritise(t4) # task will just be scheduled
         assert t4.result == 33
 
 def test_unqueue(internals):
     with ConcurrentTaskScheduler(1) as ts:
-        t1 = Task.future(fn_return_value_after_time, 0.1, "jkl")
-        t2 = Task.future(fn_wait_until_scheduled_and_return_result, t1)
+        t1 = Task.plan(fn_return_value_after_time, 0.1, "jkl")
+        t2 = Task.plan(fn_wait_until_scheduled_and_return_result, t1)
 
         tasks = [t1, t2]
         t2.schedule(ts)

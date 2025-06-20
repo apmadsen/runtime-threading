@@ -47,7 +47,7 @@ class Distributor(Generic[T]):
             exceptions: dict[int, Exception] = {}
             for canceled_task in [ task for task in tasks if task.is_canceled ]:
                 exception = cast(InterruptException, canceled_task.exception)
-                exceptions[exception.interrupt.signal or 0] = exception
+                exceptions[exception.interrupt.signal_id or 0] = exception
 
             if len(exceptions) == 1:
                 exception = exceptions[0]
@@ -72,9 +72,9 @@ class Distributor(Generic[T]):
         tasks = [ for_each(self.__queue_in, interrupt = interrupt).do(distribute) ]
 
 
-        Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).then(success)
-        Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).then(fail)
-        Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).then(cancel)
+        Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).run(success)
+        Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(fail)
+        Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).run(cancel)
 
     def take(self) -> PIterable[T]:
         """Adds a consumer to the distributor instance

@@ -25,7 +25,7 @@ class LockBase:
         interrupt: Interrupt | None = None
     ) -> bool:
         try:
-            if DEBUG:
+            if DEBUG: # pragma: no cover
                 with LOCK:
                     if not self.__lock in DEBUG_INT_WAITS:
                         DEBUG_INT_WAITS[self.__lock] = 1
@@ -62,7 +62,7 @@ class LockBase:
                     return self.__lock.acquire(True, timeout or -1)
 
         finally:
-            if DEBUG:
+            if DEBUG: # pragma: no cover
                 with LOCK:
                     if DEBUG_INT_WAITS[self.__lock] == 1:
                         del DEBUG_INT_WAITS[self.__lock]

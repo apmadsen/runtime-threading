@@ -60,7 +60,7 @@ class ForEachProto(Generic[T]):
                 **kwargs
             )
             for _ in range(parallelism)
-        ]).task()
+        ]).plan()
 
 
 def for_each(
