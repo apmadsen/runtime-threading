@@ -5,6 +5,7 @@ from runtime.threading.core.parallel.pipeline.p_fork import PFork
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 from runtime.threading.core.parallel.pipeline.p_iterator import PIterator
 from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue, ProducerConsumerQueueIterator
+from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
 
 __all__ = [
     'PContext',
@@ -15,5 +16,6 @@ __all__ = [
     'PIterable',
     'PIterator',
     'ProducerConsumerQueue',
-    'ProducerConsumerQueueIterator'
+    'ProducerConsumerQueueIterator',
+    'PipelineException',
 ]

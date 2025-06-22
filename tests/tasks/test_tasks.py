@@ -153,29 +153,13 @@ def test_cancellation(internals):
     t3.wait()
     assert t3.is_canceled
 
-
-# def test_linked_cancellation():
-#     # when running a tasked with linked interrupts, signaling of any of those linked interrupts
-#     # should result in task being canceled
-
-#     def fn_task_1(task: Task[Any]) -> int:
-#         task.interrupt.wait_event.wait()
-#         task.interrupt.raise_if_signaled()
-#         return 0
-
-#     task1 = Task.run(fn_task_1)
-
-#     def fn_task_2(task: Task[Any]) -> int:
-#         return task1.result
-
-#     task2 = Task.run(fn_task_2)
-#     task1.cancel()
-
-#     with assert_raises(TaskInterruptException):
-#         task2.result
-
-#     assert task2.is_canceled
-#     assert task2.state == TaskState.CANCELED
+# def test_x(internals):
+#     test_str = "test"
+#     t1 = Task.plan(fn_return_value_after_time, 0.005, test_str)
+#     t2 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state)
+#     t1.schedule()
+#     Task.wait_all((t1, t2))
+#     x=0
 
 def test_continuations(internals):
     # assertions on task start and finish time, based on time.sleep is risky,

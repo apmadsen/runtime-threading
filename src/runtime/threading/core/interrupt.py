@@ -61,8 +61,8 @@ class Interrupt:
 
         return False
 
-    @classmethod
-    def _create(cls, *linked_interrupts: Interrupt) -> tuple[Interrupt, Callable[[int], None]]:
+    @staticmethod
+    def _create(*linked_interrupts: Interrupt) -> tuple[Interrupt, Callable[[int], None]]:
         new_token = Interrupt()
         if linked_interrupts:
             with LOCK:

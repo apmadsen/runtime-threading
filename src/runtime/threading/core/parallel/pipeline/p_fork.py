@@ -4,6 +4,7 @@ from typing import TypeVar, Sequence, MutableSequence, Iterable, Any, cast
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 from runtime.threading.core.parallel.pipeline.p_context import PContext
 from runtime.threading.core.parallel.pipeline.p_fn import PFn
+from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
 from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions

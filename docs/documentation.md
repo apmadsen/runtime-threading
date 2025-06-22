@@ -1,6 +1,6 @@
 [Documentation](/docs/documentation.md)
 
-# Runtime-Threding documentation
+# Runtime-Threading documentation
 
 ### [Version 0.0](0.0/version.md)
 

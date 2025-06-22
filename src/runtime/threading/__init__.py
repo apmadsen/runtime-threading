@@ -9,6 +9,8 @@ from runtime.threading.core.helpers import acquire_or_fail, signal_after
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.interrupt import Interrupt
 
+sleep = terminate_event.wait
+
 __all__ = [
     'Event',
     'terminate_event',
@@ -22,4 +24,5 @@ __all__ = [
     'InterruptException',
     'acquire_or_fail',
     'signal_after',
+    'sleep',
 ]

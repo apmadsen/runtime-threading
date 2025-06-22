@@ -63,14 +63,6 @@ def report_tasks():
             print("\n-- TASKS:")
             for scheduler, (thread, task) in schedulers.items():
                 print(f"\tSCHEDULER {id(scheduler)} :")
-                # if isinstance(scheduler, ConcurrentTaskScheduler):
-                #     threads = cast(tuple[Thread], getattr(scheduler, "_ConcurrentTaskScheduler__active_threads"))
-                #     for thread in threads:
-                #         if hasattr(thread, "_target"):
-                #             target = get_function_name(getattr(thread, "_target"))
-                #             if not target.endswith("concurrent_task_scheduler.__run"):
-                #                 x=0
-
                 if task:
                     print(f"\t {thread.name} ->")
                     print(f"\t\t {task.id} : {task.state.name}")

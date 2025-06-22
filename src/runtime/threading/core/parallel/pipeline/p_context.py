@@ -1,16 +1,43 @@
 from __future__ import annotations
-from typing import Any, ClassVar, MutableSequence, overload
+from typing import Any, ClassVar, overload
+from collections import deque
+from multiprocessing import cpu_count as get_cpu_count
 from threading import local
 
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.lock import Lock
-from runtime.threading.core.parallel.parallel_exception import ParallelException
+from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
 
 LOCK = Lock()
-STACKS = local()
+class Stack(local):
+    __stack: deque[PContext] | None
 
+    def get(self) -> deque[PContext]:
+        if not hasattr(self, "_Stack__stack") or self.__stack is None:
+            self.__stack = deque((PContext(get_cpu_count()),))
+        return self.__stack
+
+    def try_register(self, context: PContext) -> bool:
+        if not hasattr(self, "_Stack__stack") or self.__stack is None:
+            self.__stack = deque((context,))
+            return True
+        elif len(self.__stack) == 0:
+            self.__stack.append(context)
+            return True
+        else:
+            return False
+
+    def try_unregister(self, context: PContext) -> bool:
+        if self.__stack and len(self.__stack) == 1 and self.__stack[0] == context:
+            self.__stack.clear()
+            return True
+        else:
+            return False
+
+
+STACK = Stack()
 class PContext():
     __slots__ = [ "__id", "__max_parallelism", "__scheduler", "__interrupt_signal" ]
     __current__id__: ClassVar[int] = 0
@@ -70,27 +97,28 @@ class PContext():
         """Returns the root parallel context
         """
         with LOCK:
-            stack = PContext.__get_stack()
-            return stack[0]
+            return STACK.get()[0]
 
     @staticmethod
     def current() -> PContext:
         """Returns the current parallel context
         """
         with LOCK:
-            stack = PContext.__get_stack()
-            return stack[-1]
+            return STACK.get()[-1]
 
     @staticmethod
-    def __get_stack() -> MutableSequence[PContext]:
+    def register(parent: PContext) -> bool:
         with LOCK:
-            if not hasattr(STACKS, "stack") or getattr(STACKS, "stack") is None:
-                STACKS.stack = [PContext(2)]
-            return STACKS.stack
+            return STACK.try_register(parent)
+
+    @staticmethod
+    def unregister(parent: PContext) -> bool:
+        with LOCK:
+            return STACK.try_unregister(parent)
 
     def __enter__(self) -> PContext:
         with LOCK:
-            stack = PContext.__get_stack()
+            stack = STACK.get()
             stack.append(self)
             return self
 
@@ -101,10 +129,10 @@ class PContext():
             del self.__scheduler
             del self.__interrupt_signal
 
-            stack = PContext.__get_stack()
+            stack = STACK.get()
 
             if not any(stack): # pragma: no cover
-                raise ParallelException(f"PContext Stack error: Context {self.id} already exited")
+                raise PipelineException(f"PContext Stack error: Context {self.id} already exited")
             elif (current := stack.pop() ) and current != self: # pragma: no cover
                 stack.append(current)
-                raise ParallelException(f"PContext Stack error: Context {self.id} exited while nested context is still active")
+                raise PipelineException(f"PContext Stack error: Context {self.id} exited while nested context is still active")

@@ -1,5 +1,5 @@
 # pyright: basic
-from typing import Iterable, List
+from typing import Iterable, Any
 from datetime import datetime
 from pytest import raises as assert_raises, fixture
 from re import escape
@@ -7,23 +7,50 @@ from re import escape
 from runtime.threading import InterruptSignal, Interrupt, InterruptException
 from runtime.threading.tasks import Task, AggregateException, TaskCanceledError, TaskException
 from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, PFork, ProducerConsumerQueue
-from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
+from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler, TaskScheduler
 
 from tests.parallel.pipeline.baseline_pfn import baseline_pfn
 from tests.parallel.pipeline.baseline_pfork import baseline_pfork
 
 def test_p_context(internals):
+    default_scheduler = TaskScheduler.default()
     root = PContext.root()
-    assert PContext.current() is root
+    current = PContext.current()
+    assert current is root
 
     with PContext(2) as ctx1:
         assert PContext.current() is ctx1
         assert PContext.current() is not root
+        assert ctx1.scheduler is default_scheduler
 
         with PContext(2) as ctx2:
             assert ctx2 is not ctx1
             assert PContext.current() is ctx2
             assert PContext.current() is not root
+            assert ctx2.scheduler is default_scheduler
+
+    # check that tasks within PContext's attach to that PContext
+    with PContext(2, scheduler=ConcurrentTaskScheduler(8)) as ctx3:
+        def fn(task: Task[Any]) -> bool:
+            pc = PContext.current()
+            assert pc is ctx3
+            assert pc is not root
+            assert TaskScheduler.current() is pc.scheduler
+            return True
+
+        assert ctx3.scheduler is not TaskScheduler.current()
+        assert ctx3.scheduler is not default_scheduler
+
+        subtask1 = Task.run(fn)
+        assert subtask1.result
+
+        subtask2 = Task.run(fn)
+        assert subtask2.result
+
+        subtask3 = Task.create(scheduler=default_scheduler).run(fn)
+        with assert_raises(AssertionError):
+            assert subtask3.result
+        x=0
 
 
 def test_basics(internals):

@@ -3,14 +3,14 @@ from typing import TypeVar, Generic, Iterable, Any, cast
 from runtime.threading.core.event import Event
 from runtime.threading.core.auto_clear_event import AutoClearEvent
 from runtime.threading.core.concurrent.queue import Queue
-from runtime.threading.core.parallel.parallel_exception import ParallelException
+from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable, PIterator
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.interrupt import Interrupt
 
-QueueCompletedError = ParallelException("ProducerConsumerQueue is completed")
-QueueLinkedToAnotherQueueError = ParallelException("ProducerConsumerQueue is linked to the output of a ProducerConsumerQueueIterator, and therefore cannot be completed manually")
+QueueCompletedError = PipelineException("ProducerConsumerQueue is completed")
+QueueLinkedToAnotherQueueError = PipelineException("ProducerConsumerQueue is linked to the output of a ProducerConsumerQueueIterator, and therefore cannot be completed manually")
 
 T = TypeVar('T')
 
@@ -170,7 +170,7 @@ class ProducerConsumerQueue(Generic[T]):
             Exception: Raises an exception if queue is already completed.
         """
         if self.__is_complete:
-            raise ParallelException("ProducerConsumerQueue is already completed")
+            raise PipelineException("ProducerConsumerQueue is already completed")
 
         self.fail_if_not_complete(error)
 

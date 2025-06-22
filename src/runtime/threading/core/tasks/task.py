@@ -19,6 +19,7 @@ from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
 from runtime.threading.core.tasks.task_exception import TaskException
 from runtime.threading.core.tasks.helpers import get_function_name
+from runtime.threading.core.parallel.pipeline.p_context import PContext
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -87,6 +88,10 @@ class TaskProto:
         def fn_wrap(task: Task[T]) -> T:
             return fn(task, *args, **kwargs)
 
+        if self.__scheduler is None:
+            if ( pc := PContext.current() ) and pc is not PContext.root():
+                self.__scheduler = pc.scheduler
+
         task = Task[T](fn_wrap, self.__name, self.__interrupt, self.__lazy)
         task.schedule(self.__scheduler or TaskScheduler.current())
         return task
@@ -104,8 +109,11 @@ class TaskProto:
         def fn_continue(task: Task[Any], other: Task[Any], *args: P.args, **kwargs: P.kwargs) -> T:
             return fn(task, *args, **kwargs)
 
-        return Task.create(interrupt = self.__interrupt).run(fn_sleep).continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue, *args, **kwargs)
+        if self.__scheduler is None:
+            if ( pc := PContext.current() ) and pc is not PContext.root():
+                self.__scheduler = pc.scheduler
 
+        return Task.create(interrupt = self.__interrupt).run(fn_sleep).continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue, *args, **kwargs)
 
 class ContinuationProto:
     __slots__ = [ "__tasks", "__name", "__interrupt", "__when", "__options" ]
@@ -167,7 +175,7 @@ class Task(Generic[T]):
         Generic (type): The result/output type (optional)
     """
     __slots__ = [
-        "__id", "__name", "__parent", "__scheduler", "__internal_event", "__lock", "__weakref__",
+        "__id", "__name", "__parent", "__scheduler", "__pctx", "__internal_event", "__lock", "__weakref__",
         "__target", "__exception", "__state", "__interrupt", "__interrupt_signal", "__lazy", "__result"
     ]
     __current_id__: ClassVar[int] = 1
@@ -195,6 +203,9 @@ class Task(Generic[T]):
         self.__lazy = lazy
         self.__result: T | None = None
         self.__parent = TaskScheduler.current_task()
+
+        pctx = PContext.current()
+        self.__pctx = pctx if pctx is not PContext.root() else None
 
 
     @property
@@ -371,6 +382,11 @@ class Task(Generic[T]):
             self.__transition_to(TaskState.RUNNING)
 
         try:
+            if self.__pctx and TaskScheduler.current() is self.__pctx.scheduler and PContext.register(self.__pctx):
+                pass
+            else:
+                self.__pctx = None
+
             self.__interrupt.raise_if_signaled()
             self.__result = self.__target(self)
 
@@ -392,6 +408,9 @@ class Task(Generic[T]):
                 self.__exception = ex
                 self.__transition_to(TaskState.FAILED)
         finally:
+            if self.__pctx:
+                PContext.unregister(self.__pctx)
+                self.__pctx = None
             self.__internal_event.signal()
 
 

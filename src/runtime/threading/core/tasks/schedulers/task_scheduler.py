@@ -33,8 +33,8 @@ class TaskScheduler(ABC):
     def is_closed(self) -> bool:
         ...
 
-    @classmethod
-    def default(cls) -> TaskScheduler:
+    @staticmethod
+    def default() -> TaskScheduler:
         """Returns the default task scheduler
         """
         with LOCK:
@@ -43,8 +43,8 @@ class TaskScheduler(ABC):
                 TaskScheduler.__default__ = ConcurrentTaskScheduler()
             return TaskScheduler.__default__
 
-    @classmethod
-    def current(cls) -> TaskScheduler:
+    @staticmethod
+    def current() -> TaskScheduler:
         """Returns the task scheduler of the currently running task, or the default task scheduler if not called from within a running task
 
         Returns:
@@ -57,8 +57,8 @@ class TaskScheduler(ABC):
             else:
                 return TaskScheduler.default()
 
-    @classmethod
-    def current_task(cls) -> Task[Any] | None:
+    @staticmethod
+    def current_task() -> Task[Any] | None:
         """Returns the currently running task, if any
 
         Returns:

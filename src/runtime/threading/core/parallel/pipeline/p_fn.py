@@ -4,7 +4,7 @@ from math import ceil
 import collections.abc
 
 from runtime.threading.core.tasks.task import Task
-from runtime.threading.core.parallel.parallel_exception import ParallelException
+from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
 from runtime.threading.core.parallel.process import process
 from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.parallel.pipeline.p_context import PContext
@@ -60,7 +60,7 @@ class PFn(Generic[Tin, Tout]):
 
     def __call__(self, items: PIterable[Tin] | Iterable[Tin]) -> PIterable[Tout]:
         if not self.__fn:
-            raise ParallelException("Parallel function is NULL") # pragma: no cover
+            raise PipelineException("Parallel function is NULL") # pragma: no cover
 
         pc = PContext.current()
         output = process(
@@ -75,7 +75,7 @@ class PFn(Generic[Tin, Tout]):
 
     def _output(self, items: Iterable[Tin], output_queue: ProducerConsumerQueue[Tout]) -> Task[Any]:
         if not self.__fn:
-            raise ParallelException("Parallel function is NULL") # pragma: no cover
+            raise PipelineException("Parallel function is NULL") # pragma: no cover
 
         pc = PContext.current()
         return process(
