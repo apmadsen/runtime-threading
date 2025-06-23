@@ -94,7 +94,7 @@ class PFork(PFn[Tin, Tout]):
             ) for _ in range(parallelism)
         ]
 
-        t_complete = Task.with_all(tasks, options=ContinuationOptions.DEFAULT).run(complete_queues)
+        t_complete = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY).run(complete_queues)
         t_fail = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(fail_queues)
         t_cancel = Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).run(cancel_queues)
 

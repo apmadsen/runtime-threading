@@ -12,15 +12,11 @@ from runtime.threading.core.event_continuation import EventContinuation
 from runtime.threading.core.continue_when import ContinueWhen
 from runtime.threading.core.threading_exception import ThreadingException
 from runtime.threading.core.interrupt_exception import InterruptException
-
+from runtime.threading.core.testing.debug import get_events_debugger
 
 if TYPE_CHECKING:
     from runtime.threading.core.interrupt import Interrupt
 
-LOCK = Lock()
-DEBUG = False
-DEBUG_INT_WAITS: dict[TEvent, int] = {}
-DEBUG_CONTINUATIONS: dict[Event, set[Continuation]] = {}
 
 class Event:
     """A standard event used for synchronization between tasks.
@@ -170,12 +166,8 @@ class Event:
             events = ( continuation.interrupt.wait_event, *events )
 
         for event in events:
-            if DEBUG: # pragma: no cover
-                with LOCK:
-                    if not event in DEBUG_CONTINUATIONS:
-                        DEBUG_CONTINUATIONS[event] = set((continuation,))
-                    else:
-                        DEBUG_CONTINUATIONS[event].add(continuation)
+            if debugger := get_events_debugger(): # pragma: no cover
+                debugger.register_continuation(event, continuation)
 
             with event.__lock:
                 event.__continuations.add(continuation)
@@ -198,32 +190,27 @@ class Event:
                     pass
 
         for continuation in expedited:
-            if DEBUG: # pragma: no cover
-                with LOCK:
-                    if self in DEBUG_CONTINUATIONS and continuation in DEBUG_CONTINUATIONS[self]:
-                        DEBUG_CONTINUATIONS[self].remove(continuation)
+            if debugger := get_events_debugger(): # pragma: no cover
+                debugger.unregister_continuation(self, continuation)
+
             with self.__lock:
                 if continuation in self.__continuations: # required because events may remove continuations from other events (further down)
                     self.__continuations.remove(continuation)
 
-        if DEBUG: # pragma: no cover
-            with LOCK:
-                if self in DEBUG_CONTINUATIONS:
-                    del DEBUG_CONTINUATIONS[self]
+        if debugger := get_events_debugger(): # pragma: no cover
+            debugger.unregister_continuation(self)
+
 
         for continuation in expedited:
             for continuation_event in continuation.events:
                 continuation_event._after_wait()
                 # remove continuation on any other events as it is not done
                 if continuation in continuation_event.__continuations:
-                    if DEBUG: # pragma: no cover
-                        with LOCK:
-                            if continuation_event in DEBUG_CONTINUATIONS:
-                                DEBUG_CONTINUATIONS[continuation_event].remove(continuation)
-                                if not DEBUG_CONTINUATIONS[continuation_event]:
-                                    del DEBUG_CONTINUATIONS[continuation_event]
-
-                    continuation_event.__continuations.remove(continuation)
+                    with continuation_event.__lock:
+                        if continuation in continuation_event.__continuations: # check again since continuation might have been removed before acquiring the lock
+                            if debugger := get_events_debugger(): # pragma: no cover
+                                debugger.unregister_continuation(continuation_event, continuation)
+                            continuation_event.__continuations.remove(continuation)
 
 
     def _after_wait(self):
@@ -234,12 +221,8 @@ class Event:
     @staticmethod
     def __int_wait(event: TEvent, timeout: float | None = None) -> bool:
         try:
-            if DEBUG: # pragma: no cover
-                with LOCK:
-                    if not event in DEBUG_INT_WAITS:
-                        DEBUG_INT_WAITS[event] = 1
-                    else:
-                        DEBUG_INT_WAITS[event] += 1
+            if debugger := get_events_debugger(): # pragma: no cover
+                debugger.register_event_wait(event)
 
             if timeout and timeout < 0: # pragma: no cover
                 raise ValueError("'timeout' must be a non-negative number")
@@ -266,12 +249,8 @@ class Event:
                 with TaskScheduler.current().suspend():
                     return event.wait(timeout)
         finally:
-            if DEBUG: # pragma: no cover
-                with LOCK:
-                    if DEBUG_INT_WAITS[event] == 1:
-                        del DEBUG_INT_WAITS[event]
-                    else:
-                        DEBUG_INT_WAITS[event] -= 1
+            if debugger := get_events_debugger(): # pragma: no cover
+                debugger.unregister_event_wait(event)
 
 
 

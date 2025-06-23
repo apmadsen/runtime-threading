@@ -22,12 +22,14 @@ def test_basics(internals):
     assert o == len(items)
 
     items1 = [ randint(0, 100000) for _ in range(1000) ]
-    pcq1 = ProducerConsumerQueue[int](items1)
+    pcq1 = ProducerConsumerQueue[int]()
     pcq2 = ProducerConsumerQueue[int](pcq1.get_iterator())
 
     assert not pcq1.is_async
     assert pcq2.is_async
     assert not pcq2.wait_event.wait(0)
+    pcq1.put_many_async(items1).wait()
+    pcq1.complete()
 
     with assert_raises(PipelineException, match=escape(str(QueueCompletedError))):
         pcq1.put(1)
@@ -62,6 +64,7 @@ def test_basics(internals):
     with assert_raises(Exception, match="Fail"):
         pcq3.try_take()
 
+    assert pcq3.is_failed
 
 def test_put_many(internals):
     test_items = [ randint(0, 100000) for _ in range(100) ]

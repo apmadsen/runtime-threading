@@ -33,7 +33,7 @@ class Stack(local):
         if self.__stack and len(self.__stack) == 1 and self.__stack[0] == context:
             self.__stack.clear()
             return True
-        else:
+        else: # pragma: no cover
             return False
 
 

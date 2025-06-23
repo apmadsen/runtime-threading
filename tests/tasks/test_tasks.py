@@ -10,6 +10,7 @@ from runtime.threading.tasks import (
     TaskCompletedError, TaskNotScheduledError, TaskAlreadyRunningError, TaskAlreadyScheduledError,
     TaskCanceledError, AwaitedTaskCanceledError
 )
+from runtime.threading.tasks.schedulers import TaskScheduler, ConcurrentTaskScheduler
 from runtime.threading import InterruptSignal, Interrupt, InterruptException, Event
 
 from tests.shared_functions import (
@@ -25,21 +26,19 @@ T = TypeVar('T')
 
 
 def test_basic(internals):
-    t1 = Task.plan(fn_sleep_if_not_canceled, 0.025)
+    t1 = Task.plan(fn_sleep_if_not_canceled, 0.5)
 
     with assert_raises(TaskException, match=escape(str(TaskNotScheduledError))):
         t1.result
 
-    t2 = Task.run(fn_sleep_if_not_canceled, 0.03)
+    t2 = Task.run(fn_sleep_if_not_canceled, 0.5)
     assert t1.id != t2.id
     t1.schedule()
 
     with assert_raises(TaskException, match=escape(str(TaskAlreadyScheduledError))):
         t1.schedule()
 
-
-
-    assert not Task.wait_all([t1, t2], 0.01)
+    assert not Task.wait_all([t1, t2], 0.0001)
     assert Task.wait_any([t1, t2])
     assert Task.wait_all([t1, t2])
     assert t1.wait()
@@ -54,6 +53,15 @@ def test_basic(internals):
 
     tparent = Task.run(fn_return_parent_task)
     assert tparent.result is tparent
+
+# def test_x(internals):
+#     # t1 = Task.plan(fn_sleep_if_not_canceled, 0.5)
+#     t2 = Task.run(fn_sleep_if_not_canceled, 0.5)
+#     # t1.schedule()
+
+#     # Task.wait_all([t1, t2])
+#     t2.wait()
+
 
 def test_run_synchronously(internals):
     signal1 = Event()
@@ -153,13 +161,6 @@ def test_cancellation(internals):
     t3.wait()
     assert t3.is_canceled
 
-# def test_x(internals):
-#     test_str = "test"
-#     t1 = Task.plan(fn_return_value_after_time, 0.005, test_str)
-#     t2 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state)
-#     t1.schedule()
-#     Task.wait_all((t1, t2))
-#     x=0
 
 def test_continuations(internals):
     # assertions on task start and finish time, based on time.sleep is risky,
@@ -277,3 +278,8 @@ def test_lazy_task(internals):
 def test_run_after(internals):
     t1 = Task.run_after(0.01, fn_return_value_after_time, 0, "test")
     assert t1.result == "test"
+
+    with ConcurrentTaskScheduler(2) as scheduler:
+        t1 = Task.create(scheduler=scheduler).run_after(0.01, fn_return_value_after_time, 0, "test")
+        assert t1.result == "test"
+

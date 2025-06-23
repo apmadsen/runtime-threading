@@ -9,7 +9,7 @@ if TYPE_CHECKING: # pragma: no cover
     from runtime.threading.core.interrupt import Interrupt
 
 class Continuation:
-    __slots__ = [ "__lock", "__when", "__what", "__done", "__interrupt" ]
+    __slots__ = [ "__lock", "__when", "__what", "__done", "__interrupt", "__referrer__" ]
 
     def __init__(
         self,

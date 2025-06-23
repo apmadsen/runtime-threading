@@ -25,7 +25,9 @@
                 "--cov=src/",
                 "--cov-config=.coveragerc",
                 "./tests",
-            ]
+            ], "env": {
+                "TEST_DEBUG": "false"
+            }
         },
     ]
 }

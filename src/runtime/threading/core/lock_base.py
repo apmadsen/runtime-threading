@@ -5,13 +5,10 @@ from types import TracebackType
 from datetime import datetime
 
 from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVAL
+from runtime.threading.core.testing.debug import get_locks_debugger, get_referrer
 
 if TYPE_CHECKING: # pragma: no cover
     from runtime.threading.core.interrupt import Interrupt
-
-LOCK = RLock()
-DEBUG = False
-DEBUG_INT_WAITS: dict[RLock | TLock | Semaphore, int] = {}
 
 class LockBase:
     __slots__ = ["__lock"]
@@ -25,12 +22,8 @@ class LockBase:
         interrupt: Interrupt | None = None
     ) -> bool:
         try:
-            if DEBUG: # pragma: no cover
-                with LOCK:
-                    if not self.__lock in DEBUG_INT_WAITS:
-                        DEBUG_INT_WAITS[self.__lock] = 1
-                    else:
-                        DEBUG_INT_WAITS[self.__lock] += 1
+            if debugger := get_locks_debugger(): # pragma: no cover
+                debugger.register_lock_wait(self.__lock)
 
             start_time = datetime.now()
             if timeout and timeout < 0: # pragma: no cover
@@ -62,12 +55,8 @@ class LockBase:
                     return self.__lock.acquire(True, timeout or -1)
 
         finally:
-            if DEBUG: # pragma: no cover
-                with LOCK:
-                    if DEBUG_INT_WAITS[self.__lock] == 1:
-                        del DEBUG_INT_WAITS[self.__lock]
-                    else:
-                        DEBUG_INT_WAITS[self.__lock] -= 1
+            if debugger := get_locks_debugger(): # pragma: no cover
+                debugger.unregister_lock_wait(self.__lock)
 
 
     def release(self):
