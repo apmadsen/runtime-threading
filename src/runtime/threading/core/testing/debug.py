@@ -23,7 +23,7 @@ def enable_debugging() -> tuple[EventsDebugger, LocksDebugger]: # pyright: ignor
         import runtime.threading.core.lock_base as locks_module
         events_module.DEBUGGING = True
         locks_module.DEBUGGING = True
-        print("WARNING: EXTENSIVE DEBUGGING ENABLED")
+        print("\nWARNING: EXTENSIVE DEBUGGING ENABLED\n")
         return EVENTS_DEBUGGER, LOCKS_DEBUGGER
 
 def get_events_debugger() -> EventsDebugger | None: # pragma: no cover

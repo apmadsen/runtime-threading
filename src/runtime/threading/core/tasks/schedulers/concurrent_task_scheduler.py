@@ -176,6 +176,12 @@ class ConcurrentTaskScheduler(TaskScheduler):
         if self is TaskScheduler.default() and not self.finalizing:
             raise ThreadingException("Cannot close default scheduler") # pragma: no cover
 
+        self._close()
+
+    def _close(self) -> None:
+        if self.__closed is not None:
+            return
+
         wait_for_close = False
         with self.synchronization_lock:
             self.__closed = OneTimeEvent()
@@ -221,6 +227,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
                                     break
 
                             task = self.__queue.dequeue(timeout = self.__keep_alive, interrupt = self.__close.interrupt)
+
                 except (TimeoutError, InterruptException) as ex:
                     if isinstance(ex, InterruptException) and ex.interrupt != self.__close.interrupt:
                         raise # pragma: no cover
@@ -261,7 +268,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
             self.__threads.remove(cur_thread)
 
     def __finalize__(self) -> None:
-        self.close() # pragma: no cover
+        self._close() # pragma: no cover
 
     class _SuspendedTask:
         __slots__ = ["__resume"]
