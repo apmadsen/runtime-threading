@@ -98,14 +98,8 @@ class ProcessProto(Generic[Tin]):
                 queue_out.fail(AggregateException(tuple(exceptions.values()))) # pragma: no cover -- should never happen sinde underlying tasks will always have the same interrupt
 
         def fail(task: Task[Any], tasks: Sequence[Task[Any]]):
-            exceptions: Sequence[Exception] = []
-            for failed_task in [ task for task in tasks if task.is_failed ]:
-                exception = cast(Exception, failed_task.exception)
-                if isinstance(exception, AggregateException):
-                    exception = exception.flatten()
-
-                exceptions.append(exception)
-            queue_out.fail(AggregateException(exceptions))
+            exception = AggregateException(tuple(cast(Exception, task.exception) for task in tasks if task.is_failed ))
+            queue_out.fail(exception)
 
 
         task_success = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).run(success)

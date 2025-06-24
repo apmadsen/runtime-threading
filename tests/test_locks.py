@@ -1,12 +1,11 @@
 # pyright: basic
 from pytest import raises as assert_raises, fixture
-from typing import Any, cast
-from time import sleep
-from threading import Event as IntEvent, Lock as IntLock
+from typing import cast
+from threading import Lock as TLock
 
 from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER
 from runtime.threading.tasks import Task
-from runtime.threading import InterruptSignal, Event, Interrupt, InterruptException, Lock, Semaphore, acquire_or_fail
+from runtime.threading import InterruptSignal, Event, Interrupt, InterruptException, Lock, Semaphore, acquire_or_fail, sleep
 
 from tests.shared_functions import (
     fn_acquire_signal_and_sleep, fn_signal_after_time
@@ -105,7 +104,7 @@ def test_lock_async_cancellation(internals):
 def test_acquire_or_fail(internals):
     l1 = Lock(False)
     locked_event = Event()
-    int_lock = cast(IntLock, getattr(l1, "_LockBase__lock")) # requires lock to be a normal Lock (ie. "Lock(False)"), not an RLock
+    int_lock = cast(TLock, getattr(l1, "_LockBase__lock")) # requires lock to be a normal Lock (ie. "Lock(False)"), not an RLock
 
     with acquire_or_fail(l1, 0, lambda: Exception("Fail")):
         assert int_lock.locked()

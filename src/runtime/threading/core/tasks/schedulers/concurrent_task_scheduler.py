@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, MutableSequence, Callable, ContextManager, cast
 from multiprocessing import cpu_count as get_cpu_count
-from threading import Thread, Event as IntEvent, current_thread
+from threading import Thread, Event as TEvent, current_thread
 from contextlib import nullcontext
 
 from runtime.threading.core.interrupt_exception import InterruptException
@@ -38,7 +38,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
         self.__max_parallelism = max_parallelism
         self.__keep_alive = keep_alive
-        self.__queue: Queue[Task[Any] | IntEvent] = Queue()
+        self.__queue: Queue[Task[Any] | TEvent] = Queue()
         self.__threads: MutableSequence[Thread] = []
         self.__active_threads: MutableSequence[Thread] = []
         self.__suspended_threads: MutableSequence[Thread] = []
@@ -150,7 +150,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
                     cast(Task[Any], self.current_task()).name = org_name + " *RESUMING"
                     self._refresh_task()
 
-                    event = IntEvent()
+                    event = TEvent()
 
                     self.__queue.enqueue(event)
 
@@ -193,7 +193,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
     def __exit__(self, *args: Any) -> None:
         self.close()
 
-    def __run(self, task: Task[Any] | IntEvent | None) -> None:
+    def __run(self, task: Task[Any] | TEvent | None) -> None:
         thread = current_thread()
         try:
             with self.synchronization_lock:
@@ -209,7 +209,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
                         try:
                             if isinstance(task, Task):
                                 super()._run(cast(Task[Any], task))
-                            elif isinstance(task, IntEvent):
+                            elif isinstance(task, TEvent):
                                 task.set()
                                 break
 
@@ -248,16 +248,18 @@ class ConcurrentTaskScheduler(TaskScheduler):
     def _register(self) -> None:
         """Registers the current thread on the task scheduler
         """
-        super()._register()
-        cur_thread = current_thread()
-        self.__threads.append(cur_thread)
+        with self.synchronization_lock:
+            super()._register()
+            cur_thread = current_thread()
+            self.__threads.append(cur_thread)
 
     def _unregister(self) -> None:
         """Un-registers the current thread on the task scheduler
         """
-        super()._unregister()
-        cur_thread = current_thread()
-        self.__threads.remove(cur_thread)
+        with self.synchronization_lock:
+            super()._unregister()
+            cur_thread = current_thread()
+            self.__threads.remove(cur_thread)
 
 
     class _SuspendedTask:

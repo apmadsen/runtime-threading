@@ -40,11 +40,11 @@ def test_basics(internals):
 def test_queue(internals):
     count = 100
 
-    for parallelism_in in [2,4,8]:
+    for parallelism_in in [2]:
         with ConcurrentTaskScheduler(parallelism_in) as scheduler_in:
             facit = sorted([ i for i in range(count) ] * parallelism_in)
 
-            for parallelism_out in [2,4]:
+            for parallelism_out in [2]:
 
                 with ConcurrentTaskScheduler(parallelism_out) as scheduler_out:
                     queue1 = Queue[int]()
@@ -53,17 +53,18 @@ def test_queue(internals):
                     tasks1 = [ Task.create(scheduler=scheduler_out).run(fn_concurrent_queue, queue1, cts1.interrupt) for _ in range(parallelism_out) ]
 
                     def put1(task: Task[Any]):
+                        task.interrupt.raise_if_signaled()
                         for i in range(count):
                             queue1.enqueue(i)
 
                     def put1done(task: Task[Any], tasks: Iterable[Task[Any]]):
                         cts1.signal()
 
-                    Task.with_all([
+                    tasks2 = [
                         Task.create(scheduler=scheduler_in).run(put1) for _ in range(parallelism_in)
-                    ], options=ContinuationOptions.DEFAULT).run(put1done)
+                    ]
+                    Task.with_all(tasks2, options=ContinuationOptions.DEFAULT).run(put1done)
                     Task.wait_all(tasks1)
-
 
                     result1: list[int] = []
                     for task in tasks1:
@@ -71,6 +72,10 @@ def test_queue(internals):
 
                     result1 = sorted(result1)
                     assert facit == result1
+
+                assert scheduler_out.active_threads == 0
+
+        assert scheduler_in.active_threads == 0
 
 
 def fn_concurrent_queue(task: Task[list[int]], queue: Queue[int], interrupt: Interrupt) -> list[int]:

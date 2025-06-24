@@ -17,6 +17,7 @@ from runtime.threading.core.testing.debug import get_events_debugger
 if TYPE_CHECKING:
     from runtime.threading.core.interrupt import Interrupt
 
+DEBUGGING = False
 
 class Event:
     """A standard event used for synchronization between tasks.
@@ -42,6 +43,11 @@ class Event:
         """Indicates if the underlying events flag is set or not
         """
         return self.__internal_event.is_set()
+
+    @property
+    def _internal_event(self) -> TEvent:
+        return self.__internal_event # pragma: no cover
+
 
     def signal(self) -> None:
         """Signals the underlying event, bu setting its flag to True.
@@ -166,7 +172,7 @@ class Event:
             events = ( continuation.interrupt.wait_event, *events )
 
         for event in events:
-            if debugger := get_events_debugger(): # pragma: no cover
+            if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
                 debugger.register_continuation(event, continuation)
 
             with event.__lock:
@@ -190,14 +196,14 @@ class Event:
                     pass
 
         for continuation in expedited:
-            if debugger := get_events_debugger(): # pragma: no cover
+            if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
                 debugger.unregister_continuation(self, continuation)
 
             with self.__lock:
                 if continuation in self.__continuations: # required because events may remove continuations from other events (further down)
                     self.__continuations.remove(continuation)
 
-        if debugger := get_events_debugger(): # pragma: no cover
+        if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
             debugger.unregister_continuation(self)
 
 
@@ -208,7 +214,7 @@ class Event:
                 if continuation in continuation_event.__continuations:
                     with continuation_event.__lock:
                         if continuation in continuation_event.__continuations: # check again since continuation might have been removed before acquiring the lock
-                            if debugger := get_events_debugger(): # pragma: no cover
+                            if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
                                 debugger.unregister_continuation(continuation_event, continuation)
                             continuation_event.__continuations.remove(continuation)
 
@@ -217,11 +223,10 @@ class Event:
         """Overridable function called after event was awaited"""
         pass
 
-
     @staticmethod
     def __int_wait(event: TEvent, timeout: float | None = None) -> bool:
         try:
-            if debugger := get_events_debugger(): # pragma: no cover
+            if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
                 debugger.register_event_wait(event)
 
             if timeout and timeout < 0: # pragma: no cover
@@ -249,7 +254,7 @@ class Event:
                 with TaskScheduler.current().suspend():
                     return event.wait(timeout)
         finally:
-            if debugger := get_events_debugger(): # pragma: no cover
+            if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
                 debugger.unregister_event_wait(event)
 
 

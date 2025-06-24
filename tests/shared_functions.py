@@ -10,7 +10,6 @@ def fn_return_value(task: Task[int], value: int) -> int:
     return value
 
 def fn_return_value_after_time(task: Task[str], t_sleep: float, value: str) -> str:
-    # sleep(t_sleep)
     task.interrupt.wait_event.wait(t_sleep)
     task.interrupt.raise_if_signaled()
     return value
@@ -41,12 +40,10 @@ def fn_raise_interrupt(task: Task[str], signal: InterruptSignal):
     task.interrupt.raise_if_signaled()
 
 def fn_wait_for_task_after_time(task: Task[Any], other_task: Task[Any], t_sleep: float) -> None:
-    # sleep(t_sleep)
     task.interrupt.wait_event.wait(t_sleep)
     other_task.wait()
 
 def fn_schedule_task_after_time(task: Task[Any], other_task: Task[Any], scheduler: TaskScheduler, t_sleep: float) -> None:
-    # sleep(t_sleep)
     task.interrupt.wait_event.wait(t_sleep)
     other_task.schedule(scheduler)
 
@@ -59,7 +56,6 @@ def fn_fail_immediately(task: Task[str], error: str) -> str:
     raise Exception(error)
 
 def fn_fail_after_time(task: Task[Any], t_sleep: float, error: str) -> None:
-    # sleep(t_sleep)
     task.interrupt.wait_event.wait(t_sleep)
     raise Exception(error)
 
@@ -73,11 +69,9 @@ def fn_get_count_of_tasks(task: Task[int], tasks: Sequence[Task[Any]]) -> int:
 
 def fn_sleep_if_not_canceled(task: Task[Any], t_sleep: float) -> None:
     task.interrupt.raise_if_signaled()
-    # sleep(t_sleep)
     task.interrupt.wait_event.wait(t_sleep)
 
 def fn_raise_interrupt_after_time(task: Task[Any], t_sleep: float):
-    # sleep(t_sleep)
     task.interrupt.wait_event.wait(t_sleep)
     task.interrupt.raise_if_signaled()
 
@@ -99,11 +93,9 @@ def fn_continue_and_return_result_or_state_with_mods(task: Task[str], other_task
 def fn_acquire_signal_and_sleep(task: Task[Any], lock: Lock, acquired_event: Event, t_sleep: float) -> None:
     with lock:
         acquired_event.signal()
-        # sleep(t_sleep)
         task.interrupt.wait_event.wait(t_sleep)
 
 def fn_signal_after_time(task: Task[Any], signal: InterruptSignal, t_sleep: float) -> None:
-    # sleep(t_sleep)
     task.interrupt.wait_event.wait(t_sleep)
     signal.signal()
 
@@ -113,13 +105,11 @@ def fn_wait_for_event_and_set_another(wait_timeout: float | None, wait_event: Ev
 
 
 def fn_sleep_and_set_event(t_sleep: float, callback: Event):
-    # sleep(t_sleep)
     callback.wait(t_sleep)
     callback.signal()
 
 def fn_wait_until_scheduled_and_return_result(task: Task[float], other_task: Task[Any]) -> Any:
     while not other_task.is_scheduled:
-        # sleep(0.1)
         task.interrupt.wait_event.wait(0.1)
     return other_task.result # this will unqueue task t and run it synchronously
 

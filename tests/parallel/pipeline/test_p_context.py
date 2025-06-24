@@ -9,8 +9,6 @@ from runtime.threading.tasks import Task, AggregateException, TaskCanceledError,
 from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, PFork, ProducerConsumerQueue
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler, TaskScheduler
 
-from tests.parallel.pipeline.baseline_pfn import baseline_pfn
-from tests.parallel.pipeline.baseline_pfork import baseline_pfork
 from tests.shared_functions import fn_return_value_after_time
 
 def test_p_context(internals):

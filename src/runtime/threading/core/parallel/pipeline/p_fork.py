@@ -4,7 +4,6 @@ from typing import TypeVar, Sequence, MutableSequence, Iterable, Any, cast
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 from runtime.threading.core.parallel.pipeline.p_context import PContext
 from runtime.threading.core.parallel.pipeline.p_fn import PFn
-from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
 from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
@@ -58,23 +57,12 @@ class PFork(PFn[Tin, Tout]):
                 queue.fail(InterruptException(task.interrupt))
 
         def fail_queues(task: Task[Any], tasks: Iterable[Task[Any]]):
-            exceptions: MutableSequence[Exception] = []
-            for failed_task in [ task for task in tasks if task.is_failed ]:
-                exception = cast(Exception, failed_task.exception)
-                if isinstance(exception, AggregateException):
-                    exception = exception.flatten()
-                else:
-                    pass
+            exception = AggregateException(tuple(cast(Exception, task.exception) for task in tasks if task.is_failed ))
 
-                exceptions.append(exception)
-
-            ex = AggregateException(exceptions).flatten()
             for _, queue in self.__queues:
-                queue.fail_if_not_complete(ex)
+                queue.fail_if_not_complete(exception)
 
-            self.__queue_out.fail(ex)
-
-
+            self.__queue_out.fail(exception)
 
         def complete_queue(task: Task[Any], tasks: Iterable[Task[Any]]):
             self.__queue_out.complete()

@@ -10,11 +10,11 @@ from runtime.threading.concurrent import Queue
 def baseline_queue():
     count = 10000
 
-    for parallelism_in in [2,4]:
+    for parallelism_in in [2,4,8]:
         with ConcurrentTaskScheduler(parallelism_in) as scheduler_in:
             facit = sorted([ i for i in range(count) ] * parallelism_in)
 
-            for parallelism_out in [2,4]:
+            for parallelism_out in [2,4,8]:
                 print("Queue comparison @ in: %d out: %d" % (parallelism_in, parallelism_out))
 
                 ### runtime.threading.tasks.concurrent.queue ###

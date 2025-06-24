@@ -13,7 +13,7 @@
             "justMyCode": false
         },
         {
-            "name": "Python Test coverage",
+            "name": "Python Test Coverage",
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
@@ -28,6 +28,21 @@
             ], "env": {
                 "TEST_DEBUG": "false"
             }
+        },
+        {
+            "name": "Python Test Profiling",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "args": [
+                "-v",
+                "-s",
+                "--profile",
+                "tests/"
+            ], "env": {
+                "TEST_DEBUG": "false"
+            },
         },
     ]
 }

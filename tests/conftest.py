@@ -3,10 +3,11 @@ from os import getenv
 from typing import Any, Iterable, cast
 from pytest import fixture
 from typingutils import get_type_name
-from threading import Thread, Event
+from threading import Thread, Event, RLock, enumerate as get_threads, main_thread
 
 from runtime.threading.core.event import terminate_event
 from runtime.threading.core.continuation import Continuation
+from runtime.threading.core.tasks.config import TASK_KEEP_ALIVE
 from runtime.threading.core.tasks.helpers import get_function_name
 from runtime.threading.core.tasks.schedulers.concurrent_task_scheduler import ConcurrentTaskScheduler
 from runtime.threading.core.testing.debug import enable_debugging, EventsDebugger, LocksDebugger
@@ -17,25 +18,31 @@ LOCKS_DEBUGGER: LocksDebugger | None = None
 
 @fixture(scope = "package")
 def internals():
-    if bool(getenv("TEST_DEBUG")):
+    lock = RLock()
+
+    if getenv("TEST_DEBUG", "").lower() in ("1", "true"):
         global EVENTS_DEBUGGER, LOCKS_DEBUGGER
         EVENTS_DEBUGGER, LOCKS_DEBUGGER = enable_debugging()
 
         ev = Event()
 
-        def fn_report():
+        def fn_report_internals():
             ev.wait(20)
-            if not ev.is_set():
-                report()
+            with lock:
+                if not ev.is_set():
+                    report()
 
-        Thread(target=fn_report, args=()).start()
+        Thread(target=fn_report_internals, args=()).start()
 
     yield
 
-    if bool(getenv("TEST_DEBUG")):
-        if not ev.is_set():
-            ev.set()
-            report()
+    if getenv("TEST_DEBUG", "").lower() in ("1", "true"):
+        terminate_event.signal()
+        ev.wait(1)
+        with lock:
+            if not ev.is_set():
+                ev.set()
+                report()
 
 def get_type_name_short(cls: type) -> str:
     return get_type_name(cls).rsplit(".", maxsplit=1)[-1]
@@ -65,6 +72,24 @@ def report():
     report_locks()
     report_events()
     report_continuations()
+    report_running_threads()
+
+def report_running_threads():
+    mainthread = main_thread()
+    threads = tuple(
+        thread
+        for thread in get_threads()
+        if thread.is_alive
+        and thread is not mainthread
+        and "fn_report_internals" not in thread.name
+    )
+    if not threads:
+        print("\n-- THREADS: NONE")
+    else:
+        print("\n-- THREADS:")
+
+        for thread in threads:
+            print(f"\t{thread.name} ({thread.ident}): ")
 
 def report_locks():
     if not LOCKS_DEBUGGER or not (waits := LOCKS_DEBUGGER.get_waits()):
@@ -96,12 +121,12 @@ def filter_continuations(continuations: dict[Event, set[Continuation]]) -> dict[
     for event, continuations1 in continuations.items():
         remaining: set[Continuation] = set()
         for continuation in continuations1:
-            if referrer := get_referrer(continuation):
-                if referrer[0].startswith("concurrent_task_scheduler.py") and referrer[0].endswith("(__run)"):
-                    pass # filter out ConcurrentTaskScheduler waiting tasks
-                else:
-                    remaining.add(continuation)
-            else:
+            filter = False
+            # if referrer := get_referrer(continuation):
+            #     if referrer[0].startswith("concurrent_task_scheduler.py") and referrer[0].endswith("(__run)"):
+            #         filter = True
+
+            if not filter:
                 remaining.add(continuation)
 
         if remaining:

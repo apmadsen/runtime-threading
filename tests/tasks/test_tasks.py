@@ -2,7 +2,6 @@
 from pytest import raises as assert_raises, fixture
 from typing import Any, Iterable, Sequence, TypeVar
 from typingutils import get_type_name
-from time import sleep
 from re import escape
 
 from runtime.threading.tasks import (
@@ -11,7 +10,7 @@ from runtime.threading.tasks import (
     TaskCanceledError, AwaitedTaskCanceledError
 )
 from runtime.threading.tasks.schedulers import TaskScheduler, ConcurrentTaskScheduler
-from runtime.threading import InterruptSignal, Interrupt, InterruptException, Event
+from runtime.threading import InterruptSignal, Interrupt, InterruptException, Event, sleep
 
 from tests.shared_functions import (
     fn_return_parent_task, fn_return_task, fn_wait_for_signal, fn_schedule_task_after_time,
@@ -53,6 +52,7 @@ def test_basic(internals):
 
     tparent = Task.run(fn_return_parent_task)
     assert tparent.result is tparent
+    # Task.wait_all((t1, t2, t3))
 
 # def test_x(internals):
 #     # t1 = Task.plan(fn_sleep_if_not_canceled, 0.5)

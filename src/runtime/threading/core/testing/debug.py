@@ -18,12 +18,18 @@ def enable_debugging() -> tuple[EventsDebugger, LocksDebugger]: # pyright: ignor
         DEBUGGING = True # pyright: ignore[reportConstantRedefinition]
         EVENTS_DEBUGGER = EventsDebugger() # pyright: ignore[reportConstantRedefinition]
         LOCKS_DEBUGGER = LocksDebugger() # pyright: ignore[reportConstantRedefinition]
+
+        import runtime.threading.core.event as events_module
+        import runtime.threading.core.lock_base as locks_module
+        events_module.DEBUGGING = True
+        locks_module.DEBUGGING = True
+        print("WARNING: EXTENSIVE DEBUGGING ENABLED")
         return EVENTS_DEBUGGER, LOCKS_DEBUGGER
 
-def get_events_debugger() -> EventsDebugger | None:
+def get_events_debugger() -> EventsDebugger | None: # pragma: no cover
     return EVENTS_DEBUGGER
 
-def get_locks_debugger() -> LocksDebugger | None:
+def get_locks_debugger() -> LocksDebugger | None: # pragma: no cover
     return LOCKS_DEBUGGER
 
 class EventsDebugger: # pragma: no cover
@@ -77,7 +83,7 @@ class EventsDebugger: # pragma: no cover
                 self.__waits[event] -= 1
 
 
-class LocksDebugger:
+class LocksDebugger: # pragma: no cover
     def __init__(self):
         self.__lock_waits = RLock()
         self.__waits: dict[RLock | TLock | Semaphore, int] = {}

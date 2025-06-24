@@ -61,10 +61,6 @@ def test_error_handling(internals):
 
     with assert_raises(AggregateException):
         pl([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
-    # with assert_raises(TypeError, match="can't multiply sequence by non-int of type 'float'"):
-    #     try:
-    #         pl([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
-    #     except AggregateException as ex:
-    #         raise ex.flatten()
+
 
 

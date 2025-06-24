@@ -26,7 +26,7 @@ class Stack(local):
         elif len(self.__stack) == 0:
             self.__stack.append(context)
             return True
-        else:
+        else: # pragma: no cover
             return False
 
     def try_unregister(self, context: PContext) -> bool:

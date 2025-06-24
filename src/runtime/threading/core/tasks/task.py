@@ -494,6 +494,9 @@ class Task(Generic[T]):
             if state in [TaskState.CANCELED, TaskState.FAILED, TaskState.COMPLETED ]:
                 del self.__target
 
+    def __repr__(self) -> str:
+        return f"Task '{self.name}' {self.state.name}"
+
     @staticmethod
     def wait_any(
         tasks: Sequence[Task[Any]],

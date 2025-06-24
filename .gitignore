@@ -18,8 +18,8 @@ parts/
 sdist/
 var/
 typings/
-venv/
-.venv/
+venv*
+.venv*
 *.egg-info/
 .installed.cfg
 *.egg
@@ -62,3 +62,5 @@ tests/credentials*
 tests/config*
 tests/logs
 poetry.lock
+
+prof

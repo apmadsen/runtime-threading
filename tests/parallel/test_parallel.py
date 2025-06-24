@@ -1,11 +1,10 @@
 # pyright: basic
 from typing import Iterable, Any, cast
-from time import sleep
 from random import randint
 from pytest import raises as assert_raises, fixture
 
 from runtime.threading.tasks import Task, AggregateException
-from runtime.threading import parallel, ThreadingException, InterruptSignal, Interrupt, InterruptException
+from runtime.threading import parallel, ThreadingException, InterruptSignal, Interrupt, InterruptException, sleep
 from runtime.threading.parallel import pipeline
 from runtime.threading.concurrent import Queue
 

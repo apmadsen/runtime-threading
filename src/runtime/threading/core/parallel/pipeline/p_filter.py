@@ -3,7 +3,6 @@ from typing import Callable, TypeVar, Iterable, overload
 from runtime.threading.core.parallel.pipeline.p_fn import PFn
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.helpers import get_function_name
-from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
 
 T = TypeVar("T")
 

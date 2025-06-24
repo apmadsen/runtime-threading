@@ -58,16 +58,10 @@ class Distributor(Generic[T]):
                 queue.fail(cast(Exception, exception))
 
         def fail(task: Task[None], tasks: Iterable[Task[Any]]): # pragma: no cover -- it's impossible to trigger an exception to test this
-            exceptions: Sequence[Exception] = []
-            for failed_task in [ task for task in tasks if task.is_failed ]:
-                exception = cast(Exception, failed_task.exception)
-                if isinstance(exception, AggregateException):
-                    exception = exception.flatten()
-
-                exceptions.append(exception)
+            exception = AggregateException(tuple(cast(Exception, task.exception) for task in tasks if task.is_failed ))
 
             for queue in self.__queues_out:
-                queue.fail(AggregateException(exceptions))
+                queue.fail(exception)
 
         tasks = [ for_each(self.__queue_in, interrupt = interrupt).do(distribute) ]
 

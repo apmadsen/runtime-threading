@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import TypeVar, Iterable, Iterator, cast
 
 from runtime.threading.core.auto_clear_event import AutoClearEvent
-from runtime.threading.core.event import Event
 from runtime.threading.core.lock import Lock
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterator

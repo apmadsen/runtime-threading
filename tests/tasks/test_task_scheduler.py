@@ -1,10 +1,9 @@
 # pyright: basic
 from pytest import raises as assert_raises, fixture
-from time import sleep
 from datetime import datetime
 from typing import Any, List
 
-from runtime.threading import ThreadingException, InterruptSignal
+from runtime.threading import ThreadingException, InterruptSignal, sleep
 from runtime.threading.tasks import Task
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
 
