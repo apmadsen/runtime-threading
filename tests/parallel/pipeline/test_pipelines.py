@@ -17,6 +17,7 @@ def test_basics(internals):
     with PContext(4) as ctx:
         def fn(task: Task[float], item: int) -> Iterable[float]:
             assert ctx.interrupt.propagates_to(task.interrupt)
+            task.interrupt.raise_if_signaled()
             yield item * 1.5
 
         f1 = PFn(fn)
@@ -33,34 +34,41 @@ def test_basics(internals):
         assert sorted(result2) == facit2
 
 def test_error_handling(internals):
-    def fn1(task: Task[float], item: int) -> Iterable[float]:
-        yield item * 1.5
+    with ConcurrentTaskScheduler(8) as scheduler:
+        with PContext(4, scheduler=scheduler):
 
-    def fn2(task: Task[float], item: float) -> Iterable[float]:
-        yield item * 2.0
+            def fn1(task: Task[float], item: int) -> Iterable[float]:
+                task.interrupt.raise_if_signaled()
+                yield item * 1.5
 
-    # test single PFn
-    fn = PFn(fn1)
-    fn([1,2,3,4,5]).drain()
+            def fn2(task: Task[float], item: float) -> Iterable[float]:
+                task.interrupt.raise_if_signaled()
+                yield item * 2.0
 
-    with assert_raises(AggregateException):
-        fn([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
+            # test single PFn
+            fn = PFn(fn1)
+            fn([1,2,3,4,5]).drain()
 
-    # test chained PFn's
-    fn = PFn(fn1) | PFn(fn2)
-    fn([1,2,3,4,5]).drain()
+            with assert_raises(AggregateException):
+                fn([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
 
-    with assert_raises(AggregateException):
-        fn([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
+            # test chained PFn's
+            fn = PFn(fn1) | PFn(fn2)
+            fn([1,2,3,4,5]).drain()
+
+            with assert_raises(AggregateException):
+                fn([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
 
 
-    # test PFork
-    pl = PFn(fn1) | [
-        PFn(fn2)
-    ]
+            # test PFork
+            pl = PFn(fn1) | [
+                PFn(fn2)
+            ]
 
-    with assert_raises(AggregateException):
-        pl([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
+            with assert_raises(AggregateException):
+                pl([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
+
+    assert scheduler.threads == scheduler.suspended_threads == 0
 
 
 

@@ -9,34 +9,33 @@ from runtime.threading.tasks import Task, AggregateException, TaskCanceledError,
 from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, PFork, ProducerConsumerQueue
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler, TaskScheduler
 
-from tests.parallel.pipeline.baseline_pfn import baseline_pfn
-from tests.parallel.pipeline.baseline_pfork import baseline_pfork
 
 
 def test_pfork(internals):
-    items = [ i for i in range(1000) ]
+    with ConcurrentTaskScheduler(8) as scheduler:
+        with PContext(scheduler.max_parallelism, scheduler=scheduler):
+            items = [ i for i in range(1000) ]
 
-    # call without a parent - not the intended way to use PFork
-    f1 = PFork[int, int](( PFn(fn, 2), ))
+            # call without a parent - not the intended way to use PFork
+            f1 = PFork[int, int](( PFn(fn, 2), ))
 
-    facit = [ i * 2 for i in items ]
-    result = f1(items)
+            facit = [ i * 2 for i in items ]
+            result = f1(items)
 
-    assert sorted(result) == facit
-
-    # baseline_pfork((2,), 10)
+            assert sorted(result) == facit
 
 def test_cancellation(internals):
     items = [ i for i in range(1000) ]
     signal = InterruptSignal()
 
-    with PContext(4, interrupt=signal.interrupt) as ctx:
-        # call without a parent - not the intended way to use PFork
-        f1 = PFork[int, int](( PFn(fn, 2), ))
-        signal.signal()
+    with ConcurrentTaskScheduler(8) as scheduler:
+        with PContext(scheduler.max_parallelism, scheduler=scheduler, interrupt=signal.interrupt):
+            # call without a parent - not the intended way to use PFork
+            f1 = PFork[int, int](( PFn(fn, 2), ))
+            signal.signal()
 
-        with assert_raises(InterruptException):
-            result = list(f1(items))
+            with assert_raises(InterruptException):
+                result = list(f1(items))
 
 
 def fn(task: Task[int], item: int) -> Iterable[int]:

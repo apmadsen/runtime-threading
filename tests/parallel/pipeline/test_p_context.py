@@ -29,28 +29,29 @@ def test_p_context(internals):
             assert ctx2.scheduler is default_scheduler
 
     # check that tasks within PContext's attach to that PContext
-    with PContext(2, scheduler=ConcurrentTaskScheduler(8)) as ctx3:
+    with ConcurrentTaskScheduler(8) as scheduler:
+        with PContext(2, scheduler=scheduler) as ctx3:
 
-        t1 = Task.run_after(0.01, fn_return_value_after_time, 0, "test")
-        assert t1.result == "test"
+            t1 = Task.run_after(0.01, fn_return_value_after_time, 0, "test")
+            assert t1.result == "test"
 
-        def fn(task: Task[Any]) -> bool:
-            pc = PContext.current()
-            assert pc is ctx3
-            assert pc is not root
-            assert TaskScheduler.current() is pc.scheduler
-            return True
+            def fn(task: Task[Any]) -> bool:
+                pc = PContext.current()
+                assert pc is ctx3
+                assert pc is not root
+                assert TaskScheduler.current() is pc.scheduler
+                return True
 
-        assert ctx3.scheduler is not TaskScheduler.current()
-        assert ctx3.scheduler is not default_scheduler
+            assert ctx3.scheduler is not TaskScheduler.current()
+            assert ctx3.scheduler is not default_scheduler
 
-        subtask1 = Task.run(fn)
-        assert subtask1.result
+            subtask1 = Task.run(fn)
+            assert subtask1.result
 
-        subtask2 = Task.run(fn)
-        assert subtask2.result
+            subtask2 = Task.run(fn)
+            assert subtask2.result
 
-        subtask3 = Task.create(scheduler=default_scheduler).run(fn)
-        with assert_raises(AssertionError):
-            assert subtask3.result
-        x=0
+            subtask3 = Task.create(scheduler=default_scheduler).run(fn)
+            with assert_raises(AssertionError):
+                assert subtask3.result
+            x=0

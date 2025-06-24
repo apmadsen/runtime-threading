@@ -102,6 +102,7 @@ def test_suspend(internals):
         sleep(scheduler.keep_alive + 0.1)
 
     assert scheduler.active_threads == 0
+    assert scheduler.suspended_threads == 0
 
 
 def test_generic(internals):

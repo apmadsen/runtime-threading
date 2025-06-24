@@ -2,7 +2,7 @@ from __future__ import annotations
 from threading import Thread, RLock, current_thread, main_thread
 from typing import ContextManager, Any, ClassVar, TYPE_CHECKING
 from abc import ABC, abstractmethod
-from weakref import WeakKeyDictionary
+from weakref import WeakKeyDictionary, finalize
 
 if TYPE_CHECKING: # pragma: no cover
     from runtime.threading.core.tasks.task import Task
@@ -16,11 +16,19 @@ SchedulerClosedError = TaskException("Task scheduler has been closed")
 TaskAlreadyStartedOrScheduledError = TaskException("Task is already running or scheduled on another scheduler.")
 
 class TaskScheduler(ABC):
-    __slots__ = ["__lock"]
+    __slots__ = [ "__lock", "__finalizer", "__finalizing", "__weakref__" ]
     __default__: ClassVar[TaskScheduler | None] = None
 
     def __init__(self):
         self.__lock = RLock()
+
+        def fn_finalize(): # pragma: no cover
+            self.__finalizing = True
+            self.__finalize__()
+            self.__finalizing = False
+
+        self.__finalizing = False
+        self.__finalizer = finalize(self, fn_finalize)
 
     @property
     def synchronization_lock(self) -> RLock:
@@ -33,12 +41,23 @@ class TaskScheduler(ABC):
     def is_closed(self) -> bool:
         ...
 
+    @property
+    def finalized(self) -> bool: # pragma: no cover
+        """Indicates if object has been finalized or not."""
+        return not self.__finalizer.alive
+
+    @property
+    def finalizing(self) -> bool: # pragma: no cover
+        """Indicates if object is in the process of finalizing or not."""
+        return self.__finalizing
+
+
     @staticmethod
     def default() -> TaskScheduler:
         """Returns the default task scheduler
         """
         with LOCK:
-            if TaskScheduler.__default__ is None or TaskScheduler.__default__.is_closed:
+            if TaskScheduler.__default__ is None or TaskScheduler.__default__.is_closed or TaskScheduler.__default__.finalizing:
                 from runtime.threading.core.tasks.schedulers.concurrent_task_scheduler import ConcurrentTaskScheduler
                 TaskScheduler.__default__ = ConcurrentTaskScheduler()
             return TaskScheduler.__default__
@@ -154,4 +173,9 @@ class TaskScheduler(ABC):
     def suspend(self) -> ContextManager[Any]:
         """Suspends the current task, ie. when waiting on an event.
         """
+        ...
+
+    @abstractmethod
+    def __finalize__(self) -> None:
+        """This function is invoked when finalization process is initiated."""
         ...

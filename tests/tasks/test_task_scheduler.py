@@ -33,10 +33,10 @@ def test_concurrent_task_scheduler(internals):
         assert ts.active_threads == 0
 
     with assert_raises(ThreadingException, match="Task scheduler has been closed"):
-        ts = ConcurrentTaskScheduler(4, 0.05)
-        ts.close()
-        t = Task.plan(fn_return_value_after_time, 0.1, "def")
-        t.schedule(ts)
+        with ConcurrentTaskScheduler(4, 0.05):
+            ts.close()
+            t = Task.plan(fn_return_value_after_time, 0.1, "def")
+            t.schedule(ts)
 
 
 def test_concurrent_task_scheduler_suspension(internals):

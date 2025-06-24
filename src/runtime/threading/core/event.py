@@ -253,6 +253,7 @@ class Event:
                 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
                 with TaskScheduler.current().suspend():
                     return event.wait(timeout)
+
         finally:
             if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
                 debugger.unregister_event_wait(event)

@@ -72,6 +72,7 @@ class PContext():
         with LOCK:
             self.__id = PContext.__current__id__
             PContext.__current__id__ += 1
+
         self.__max_parallelism = max_parallelism
         self.__scheduler = scheduler or TaskScheduler.default()
         self.__interrupt_signal = InterruptSignal(interrupt) if interrupt is not None else InterruptSignal()

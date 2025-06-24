@@ -1,6 +1,7 @@
 from typing import Sequence, Iterable, Callable, TypeVar, Concatenate, ParamSpec, Any, Generic, cast, overload
 
 from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.interrupt_exception import InterruptException
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
@@ -57,11 +58,13 @@ class ProcessProto(Generic[Tin]):
     ) -> PIterable[Tout] | Task[None]:
 
         parallelism = max(1, self.__parallelism or 2)
+        signal = InterruptSignal(self.__interrupt) if self.__interrupt else InterruptSignal()
 
         queue_in = self.__items if isinstance(self.__items, ProducerConsumerQueueIterator) else ProducerConsumerQueue[Tin](self.__items).get_iterator() # put items in a ProducerConsumerQueue, if items is not a ProducerConsumerQueueIterator instance
         queue_out = output_queue or ProducerConsumerQueue[Tout]()
 
-        def process(task: Task[None], queue_in: Iterable[Tin], queue_out: ProducerConsumerQueue[Tout]) -> None:
+        def fn_process(task: Task[None], queue_in: Iterable[Tin], queue_out: ProducerConsumerQueue[Tout]) -> None:
+            task.interrupt.raise_if_signaled()
             for item in queue_in:
                 task.interrupt.raise_if_signaled()
                 queue_out.put_many(fn(task, item, *args, **kwargs))
@@ -70,9 +73,9 @@ class ProcessProto(Generic[Tin]):
             Task.create(
                 name = self.__task_name or get_function_name(fn) or None,
                 scheduler = self.__scheduler or TaskScheduler.current(),
-                interrupt = self.__interrupt,
+                interrupt = signal.interrupt,
             ).run(
-                process,
+                fn_process,
                 queue_in,
                 queue_out
             )
@@ -100,6 +103,7 @@ class ProcessProto(Generic[Tin]):
         def fail(task: Task[Any], tasks: Sequence[Task[Any]]):
             exception = AggregateException(tuple(cast(Exception, task.exception) for task in tasks if task.is_failed ))
             queue_out.fail(exception)
+            signal.signal()
 
 
         task_success = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).run(success)

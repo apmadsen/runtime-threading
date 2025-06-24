@@ -63,7 +63,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
     @property
     def threads(self) -> int:
-        """The no. of currently allocated threads
+        """The no. of currently allocated threads. This does not include suspended threads.
         """
         with self.synchronization_lock:
             return len(self.__threads)
@@ -120,7 +120,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
         """Suspends the current task, ie. when waiting on an event or lock.
         If called from a thread not created by this scheduler, nothing is changed.
         """
-        task = self.current_task()
+        task = cast(Task[Any], self.current_task())
         thread = current_thread()
 
         with self.synchronization_lock:
@@ -147,7 +147,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
                     if resume_thread != thread: # pragma: no cover
                         raise ThreadingException("Cannot resume task on a different thread than the one that suspended it")
 
-                    cast(Task[Any], self.current_task()).name = org_name + " *RESUMING"
+                    task.name = org_name + " *RESUMING"
                     self._refresh_task()
 
                     event = TEvent()
@@ -161,7 +161,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
                     event.wait()
 
-                    cast(Task[Any], self.current_task()).name = org_name
+                    task.name = org_name
                     self._refresh_task()
 
                     with self.synchronization_lock:
@@ -173,7 +173,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
     def close(self) -> None:
         """Closes the scheduler and waits for any scheduled tasks to finish
         """
-        if self is TaskScheduler.default():
+        if self is TaskScheduler.default() and not self.finalizing:
             raise ThreadingException("Cannot close default scheduler") # pragma: no cover
 
         wait_for_close = False
@@ -221,7 +221,6 @@ class ConcurrentTaskScheduler(TaskScheduler):
                                     break
 
                             task = self.__queue.dequeue(timeout = self.__keep_alive, interrupt = self.__close.interrupt)
-
                 except (TimeoutError, InterruptException) as ex:
                     if isinstance(ex, InterruptException) and ex.interrupt != self.__close.interrupt:
                         raise # pragma: no cover
@@ -240,7 +239,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
         finally:
             with self.synchronization_lock:
                 self._unregister()
-                if self.__closed is not None and len(self.__threads) == 0:
+                if self.__closed is not None and len(self.__threads) == 0 and len(self.__suspended_threads) == 0:
                     self.__closed.signal()
 
 
@@ -261,6 +260,8 @@ class ConcurrentTaskScheduler(TaskScheduler):
             cur_thread = current_thread()
             self.__threads.remove(cur_thread)
 
+    def __finalize__(self) -> None:
+        self.close() # pragma: no cover
 
     class _SuspendedTask:
         __slots__ = ["__resume"]

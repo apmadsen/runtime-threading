@@ -71,7 +71,8 @@ class PFork(PFn[Tin, Tout]):
 
 
         pc = PContext.current()
-        parallelism = self._parallelism if isinstance(self._parallelism, int) else ceil(self._parallelism * pc.max_parallelism)
+        parallelism = min(len(self.__fns), self._parallelism if isinstance(self._parallelism, int) else ceil(self._parallelism * pc.max_parallelism))
+
         tasks = [
             Task.create(
                 scheduler = pc.scheduler,
