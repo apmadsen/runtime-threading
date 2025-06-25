@@ -71,6 +71,14 @@ class TaskProto:
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[T]:
+        """Creates a new task without scheduling it.
+
+        Args:
+            fn (Callable[Concatenate[Task[T], P], T]): The target function.
+
+        Returns:
+            Task[T]: Returns the new task.
+        """
         def fn_wrap(task: Task[T]) -> T:
             return fn(task, *args, **kwargs)
 
@@ -85,6 +93,14 @@ class TaskProto:
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[T]:
+        """Creates a new task and schedules it.
+
+        Args:
+            fn (Callable[Concatenate[Task[T], P], T]): The target function.
+
+        Returns:
+            Task[T]: Returns the new task.
+        """
         def fn_wrap(task: Task[T]) -> T:
             return fn(task, *args, **kwargs)
 
@@ -103,6 +119,15 @@ class TaskProto:
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[T]:
+        """Creates a new task which will be scheduled after specified time.
+
+        Args:
+            time (float): The time to wait before scheduling the task.
+            fn (Callable[Concatenate[Task[T], P], T]): The target function.
+
+        Returns:
+            Task[T]: Returns the new task.
+        """
         def fn_sleep(task: Task[Any]) -> None:
             task.interrupt.wait(time)
 
@@ -133,10 +158,15 @@ class ContinuationProto:
         self.__interrupt = interrupt
 
     def plan(self) -> Task[None]:
+        """Creates a continuation task which will complete immediately when one or all of the awaited tasks complete.
+
+        Returns:
+            Task[None]: Returns a new task.
+        """
         continuation = CompletedTask(None)
         setattr(continuation, "_Task__state", TaskState.SCHEDULED)
 
-        Event.add_continuation(
+        Event._add_continuation( # pyright: ignore[reportPrivateUsage]
             tuple(task.wait_event for task in self.__tasks),
             TasksContinuation(self.__when, self.__tasks, continuation, self.__options, self.__interrupt)
         )
@@ -148,7 +178,14 @@ class ContinuationProto:
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[Tresult]:
+        """Creates a continuation task which will run when one or all of the awaited tasks complete.
 
+        Args:
+            fn (Callable[Concatenate[Task[Tresult], Sequence[Task[Any]], P], Tresult]): The target function.
+
+        Returns:
+            Task[Tresult]: Returns a new task.
+        """
         continuation = Task.create(
             name = self.__name or get_function_name(fn),
             interrupt = self.__interrupt
@@ -161,7 +198,7 @@ class ContinuationProto:
 
         setattr(continuation, "_Task__state", TaskState.SCHEDULED)
 
-        Event.add_continuation(
+        Event._add_continuation( # pyright: ignore[reportPrivateUsage]
             tuple(task.wait_event for task in self.__tasks),
             TasksContinuation(self.__when, self.__tasks, continuation, self.__options, self.__interrupt)
         )
@@ -169,7 +206,7 @@ class ContinuationProto:
         return continuation
 
 class Task(Generic[T]):
-    """A basic task
+    """The Task class is an abstraction of a regular thread, and it represents an application task of work.
 
     Arguments:
         Generic (type): The result/output type (optional)
@@ -187,6 +224,14 @@ class Task(Generic[T]):
         interrupt: Interrupt | None = None,
         lazy: bool = False
     ):
+        """Creates a new Task. It's recommended to use Task.create(), Task.plan() or Task.run() instead.
+
+        Args:
+            fn (Callable[[Task[T]], T]): The target function.
+            name (str | None, optional): The name of the task. Defaults to None.
+            interrupt (Interrupt | None, optional): An external interrupt used for cancellation. Defaults to None.
+            lazy (bool, optional): Specifies whether or not this task may be run lazily when awaited. Defaults to False.
+        """
         with LOCK:
             self.__id = Task.__current_id__
             Task.__current_id__ += 1
@@ -211,37 +256,38 @@ class Task(Generic[T]):
 
     @property
     def id(self) -> int:
-        """The unique task id
+        """The unique task id.
         """
         return self.__id
 
     @property
     def name(self) -> str:
-        """The unique task name
+        """The task name.
         """
         return self.__name
 
     @name.setter
     def name(self, value: str):
-        """Sets the unique task name
+        """Sets the task name
         """
         self.__name = value or f"Task_{self.__id}"
         TaskScheduler.current()._refresh_task() # pyright: ignore[reportPrivateUsage]
 
     @property
     def state(self) -> TaskState:
-        """The task state
+        """The current task state.
         """
         with self.__lock:
             return self.__state
 
     @property
     def parent(self) -> Task[Any] | None:
+        """The parent task (if any)"""
         return self.__parent
 
     @property
     def target(self) -> str: # pragma: no cover
-        """Returns the name of the target (for testing)."""
+        """Returns the name of the target function (for testing)."""
         return self.__target_name
 
     @property
@@ -260,14 +306,16 @@ class Task(Generic[T]):
 
     @property
     def is_failed(self) -> bool:
-        """Indicates if the task raised an exception.
+        """Indicates if the target function raised an exception.
         """
         with self.__lock:
             return self.__state == TaskState.FAILED
 
     @property
     def is_canceled(self) -> bool:
-        """Indicates if task was canceled or not. Only tasks which raises a InterruptException generated from Interrupt.raise_if_canceled() method, are considered canceled.
+        """Indicates if task was canceled or not. Only tasks which raises a InterruptException
+        generated from Interrupt.raise_if_canceled() method, and from the same InterruptSignal
+        are considered canceled. Simply raising an InterruptExecption will cause task to fail.
         """
         with self.__lock:
             return self.__state == TaskState.CANCELED
@@ -288,7 +336,8 @@ class Task(Generic[T]):
 
     @property
     def is_lazy(self) -> bool:
-        """Indicates if task is lazy.
+        """Indicates if task is lazy. If it is, task will be scheduled automatically
+        when ewaited, or when property Task.result is accessed.
         """
         return self.__lazy
 
@@ -300,8 +349,9 @@ class Task(Generic[T]):
 
     @property
     def result(self) -> T:
-        """The result of the task (if any).
-        This call will block until task is done, and if task raised an exception, that exception will be re-raised here.
+        """The result of the task (if any). This call will block until task is done,
+        and if target function raised an exception, that exception will be re-raised here.
+        If task is not scheduled and lazy, it will be run automatically.
         """
         with self.__lock:
             if self.__state == TaskState.NOTSTARTED:
@@ -326,29 +376,26 @@ class Task(Generic[T]):
 
     @property
     def exception(self) -> Exception | None:
-        """The task exception (if any).
+        """The exception raised by target function (if any).
         """
         return self.__exception
 
     @property
     def wait_event(self) -> Event:
-        """The internal task event, signaled upon completion
+        """The internal task event, signaled upon completion.
         """
         return self.__internal_event
 
     @staticmethod
     def current() -> Task[Any] | None:
-        """Returns the currently running task, if any
-
-        Returns:
-            Task | None: The currently running task
+        """Returns the currently running task, if any.
         """
         return TaskScheduler.current_task()
 
 
     def schedule(self, scheduler: TaskScheduler | None = None) -> None:
         """Queues the task on the specified scheduler.
-        If scheduler is omitted or None, the default task scheduler is used (ie. TaskScheduler.default).
+        If scheduler is omitted or None, the current or default task scheduler is used (ie. TaskScheduler.current).
 
         Args:
             scheduler (TaskScheduler, optional): The task scheduler. Defaults to None
@@ -421,7 +468,7 @@ class Task(Generic[T]):
 
 
     def cancel(self) -> None:
-        """Signals the tasks Interrupt
+        """Signals the tasks internal Interrupt thereby allowing it to cancel before completion.
         """
         with self.__lock:
             if self.__state == TaskState.NOTSTARTED:
@@ -433,15 +480,19 @@ class Task(Generic[T]):
         timeout: float | None = None, /,
         interrupt: Interrupt | None = None,
     ) -> bool:
-        """Waits for the task to complete.
+        """Waits for the task to complete. If task has not been scheduled and is lazy,
+        it will be run automatically.
 
         Args:
-            timeout (float, optional): The timeout in seconds. Defaults to None.
-            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
+            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
-            bool: A boolean value indicating if task completed or a timeout occurred
+            bool: Returns True if task completed. Otherwise False.
         """
+        with self.__lock:
+            if self.__state == TaskState.NOTSTARTED and self.__lazy:
+                TaskScheduler.current().prioritise(self)
 
         return self.__internal_event.wait(timeout, interrupt)
 
@@ -453,10 +504,20 @@ class Task(Generic[T]):
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[Tcontinuation]:
+        """Creates and returns a continuation task which is run when this task transitions into
+        a state matched by that specified in 'options' argument.
+
+        Args:
+            options (ContinuationOptions): Specifies when and how continuation is run.
+            fn (Callable[Concatenate[Task[Tcontinuation], Task[T], P], Tcontinuation]): The target function.
+
+        Returns:
+            Task[Tcontinuation]: Returns a new Task instance.
+        """
         continuation = Task.plan(fn, self, *args, **kwargs)
         continuation.__state = TaskState.SCHEDULED
 
-        Event.add_continuation(
+        Event._add_continuation( # pyright: ignore[reportPrivateUsage]
             (self.wait_event,),
             TasksContinuation(ContinueWhen.ALL, (self,), continuation, options, self.__interrupt)
         )
@@ -510,19 +571,20 @@ class Task(Generic[T]):
         fail_on_cancel: bool = False,
         interrupt: Interrupt | None = None
     ) -> bool:
-        """Waits for any of the tasks to complete
+        """Waits for any of the specified tasks to complete.
 
         Args:
-            tasks (Sequence[Task]): The awaited tasks
-            timeout (float, optional): The timeout in seconds. Defaults to None
-            fail_on_cancel (bool): Raise a TasksException if any task was canceled
+            tasks (Sequence[Task]): The tasks to await.
+            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            fail_on_cancel (bool): Raise a TasksException if any of the tasks was canceled.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Raises:
             AggregateException: Any failed tasks will raise an AggregateException
-            TasksException: Any canceled tasks will raise a TasksException if fail_on_canceled is True
+            TasksException: Any canceled tasks will raise a TasksException if 'fail_on_canceled' argument is True
 
         Returns:
-            bool: A boolean value indicating if any of the tasks completed or a timeout occurred
+            bool: Returns True if any of the tasks completed. Otherwise False.
         """
 
         events: Sequence[Event] = [ t.__internal_event for t in tasks ]
@@ -549,19 +611,20 @@ class Task(Generic[T]):
         fail_on_cancel: bool = False,
         interrupt: Interrupt | None = None
     ) -> bool:
-        """Waits for all of the tasks to complete
+        """Waits for all of the specified tasks to complete.
 
         Args:
-            tasks (Sequence[Task]): The awaited tasks
-            timeout (float, optional): The timeout in seconds. Defaults to None
-            fail_on_cancel (bool): Raise a TasksException if any task was canceled
+            tasks (Sequence[Task]): The tasks to await.
+            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            fail_on_cancel (bool): Raise a TasksException if any of the tasks was canceled.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Raises:
             AggregateException: Any failed tasks will raise an AggregateException
             TasksException: Any canceled tasks will raise a TasksException if fail_on_canceled is True
 
         Returns:
-            bool: A boolean value indicating if all of the tasks completed or a timeout occurred
+            bool: Returns true if all of the tasks completed. Otherwise False.
         """
 
         events: Sequence[Event] = [ t.__internal_event for t in tasks ]
@@ -588,6 +651,16 @@ class Task(Generic[T]):
         options: ContinuationOptions=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY,
         interrupt: Interrupt | None = None,
     ) -> ContinuationProto:
+        """Initiates the creation of a new continuation which is run when any of the specified tasks are completed.
+
+        Args:
+            tasks (Sequence[Task[Any]]): The tasks awaited.
+            options (ContinuationOptions): Specifies when and how continuation is run.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
+
+        Returns:
+            ContinuationProto: Returns a continuation wrapper.
+        """
         return ContinuationProto(tasks, ContinueWhen.ANY, options = options, interrupt = interrupt)
 
     @staticmethod
@@ -597,6 +670,16 @@ class Task(Generic[T]):
         options: ContinuationOptions=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY,
         interrupt: Interrupt | None = None,
     ) -> ContinuationProto:
+        """Initiates the creation of a new continuation which is run when all of the specified tasks are completed.
+
+        Args:
+            tasks (Sequence[Task[Any]]): The tasks awaited.
+            options (ContinuationOptions): Specifies when and how continuation is run.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
+
+        Returns:
+            ContinuationProto: Returns a continuation wrapper.
+        """
         return ContinuationProto(tasks, ContinueWhen.ALL, options = options, interrupt = interrupt)
 
 
@@ -608,6 +691,17 @@ class Task(Generic[T]):
         scheduler: TaskScheduler | None = None,
         lazy: bool = False
     ) -> TaskProto:
+        """Initiates the creation of a new Task.
+
+        Args:
+            name (str | None, optional): The name if the task. Defaults to None.
+            interrupt (Interrupt | None, optional): An external interrupt used to cancel the class. Defaults to None.
+            scheduler (TaskScheduler | None, optional): A scheduler onto which the task will be scheduled. Defaults to None.
+            lazy (bool, optional): Specifies if task can be lazily started or not. Defaults to False.
+
+        Returns:
+            TaskProto: Returns a task wrapper.
+        """
         return TaskProto(name, interrupt, scheduler, lazy)
 
     @staticmethod
@@ -616,6 +710,15 @@ class Task(Generic[T]):
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[Tresult]:
+        """Creates a new task without scheduling it.
+        Use Task.Create().plan() for more control of the task specifics.
+
+        Args:
+            fn (Callable[Concatenate[Task[Tresult], P], Tresult]): The target function.
+
+        Returns:
+            Task[Tresult]: Returns the new task.
+        """
         return TaskProto().plan(fn, *args, **kwargs)
 
     @staticmethod
@@ -624,6 +727,15 @@ class Task(Generic[T]):
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[Tresult]:
+        """Creates a new task and schedules it on the default scheduler.
+        Use Task.Create().run() for more control of the task specifics.
+
+        Args:
+            fn (Callable[Concatenate[Task[Tresult], P], Tresult]): The target function.
+
+        Returns:
+            Task[Tresult]: Returns the new task.
+        """
         return TaskProto().run(fn, *args, **kwargs)
 
     @staticmethod
@@ -633,6 +745,17 @@ class Task(Generic[T]):
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[Tresult]:
+        """Creates a new task which will be scheduled on the default scheduler after specified time.
+        Use Task.Create().run_after() for more control of the task specifics.
+
+        Args:
+            time (float): The time to wait before scheduling the task.
+            fn (Callable[Concatenate[Task[Tresult], P], Tresult]): The target function.
+
+        Returns:
+            Task[Tresult]: Returns the new task.
+        """
+
         return TaskProto().run_after(time, fn, *args, **kwargs)
 
     @staticmethod
@@ -643,7 +766,7 @@ class Task(Generic[T]):
             result (T): The task result.
 
         Returns:
-            Task[T]: A completed task
+            Task[T]: Returns a completed task with specified result.
         """
         task = CompletedTask(result)
         task.run_synchronously()

@@ -9,6 +9,13 @@ from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.interrupt_signal import InterruptSignal
 
 def signal_after(signal: InterruptSignal, time: float) -> None:
+    """Creates a task which signals an InterruptSignal instance after a certain
+    amount of time (seconds).
+
+    Args:
+        signal (InterruptSignal): The InterruptSignal instance to signal.
+        time (float): The amount of time (seconds) before signaling.
+    """
     def fn_signal():
         terminate_event.wait(time)
         signal.signal()
@@ -24,11 +31,12 @@ def acquire_or_fail(
     fail: Callable[[], Exception],
     interrupt: Interrupt | None = None,
 ) -> ContextManager[None]:
-    """Tries to acquire lock for a specific period of time, and raises a specific exception after timeout.
+    """Tries to acquire lock for a specific period of time, and, if unsuccessful,
+    raises a specific exception after timeout.
 
     Args:
-        lock (Lock | Semaphore): The lock opr semaphore.
-        timeout (float): The timeout in seconds after which an exception is thrown.
+        lock (Lock|Semaphore): The lock or semaphore.
+        timeout (float): The timeout in seconds after which exception is thrown.
         fail (Callable[[], Exception]): The exception generator function.
         interrupt (Interrupt, optional): The Interrupt. Defaults to None.
     """

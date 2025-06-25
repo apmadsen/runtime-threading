@@ -16,6 +16,10 @@ SchedulerClosedError = TaskException("Task scheduler has been closed")
 TaskAlreadyStartedOrScheduledError = TaskException("Task is already running or scheduled on another scheduler.")
 
 class TaskScheduler(ABC):
+    """The TaskScheduler class is the base task scheduler class responsible for managing the threads
+    used by all derived schedulers.
+    """
+
     __slots__ = [ "__lock", "__finalizer", "__finalizing", "__weakref__" ]
     __default__: ClassVar[TaskScheduler | None] = None
 
@@ -64,7 +68,8 @@ class TaskScheduler(ABC):
 
     @staticmethod
     def current() -> TaskScheduler:
-        """Returns the task scheduler of the currently running task, or the default task scheduler if not called from within a running task
+        """Returns the task scheduler of the currently running task, or the default task scheduler
+        if not called from within a running task
 
         Returns:
             TaskScheduler: The task scheduler of the currently running task, or the default task scheduler

@@ -261,6 +261,7 @@ def test_lazy_task(internals):
     test_str = "test"
     t1 = Task.create(lazy=True).plan(fn_return_value_after_time, 0.005, test_str)
     t2 = Task.create(lazy=True).plan(fn_return_value_after_time, 0.005, test_str)
+    t3 = Task.create(lazy=True).plan(fn_return_value_after_time, 0.005, test_str)
     assert not t1.is_scheduled
     assert not t1.is_completed
     assert t1.is_lazy
@@ -270,6 +271,10 @@ def test_lazy_task(internals):
     assert result == test_str
 
     result = Task.run(fn_continue_and_return_result_or_state, t2).result
+    assert t2.is_completed
+    assert result == test_str
+
+    t3.wait()
     assert t2.is_completed
     assert result == test_str
 

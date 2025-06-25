@@ -1,7 +1,7 @@
 from __future__ import annotations
 import sys
 from threading import Event as TEvent, current_thread, main_thread
-from typing import Sequence, Any, Literal, overload, cast, TYPE_CHECKING
+from typing import Sequence, Any, Literal, Annotated, overload, cast, TYPE_CHECKING
 from signal import signal, SIGTERM, SIGINT
 from time import time
 
@@ -18,22 +18,31 @@ if TYPE_CHECKING:
     from runtime.threading.core.interrupt import Interrupt
 
 DEBUGGING = False
+
 Purpose = Literal[ "USER", "TERMINATE", "CONTINUATION", "INTERRUPT_NOTIFY",
                    "CONCURRENT_TASK_SCHEDULER_CLOSE", "TASK_NOTIFY",
                    "CONCURRENT_QUEUE_NOTIFY", "PRODUCER_CONSUMER_QUEUE_NOTIFY" ]
 class Event:
-    """A standard event used for synchronization between tasks.
+    """The Event class is used for synchronization between thrads.
     """
     __slots__ = [ "__id", "__lock", "__purpose", "__internal_event", "__continuations", "__weakref__" ]
 
     @overload
     def __init__(self, *, purpose: Purpose = "USER") -> None:
         """Creates a new Event.
+
+        Args:
+            purpose (Purpose, optional): The event purpose (used for testing). Defaults to "USER".
         """
         ...
     @overload
     def __init__(self, internal_event: TEvent, *, purpose: Purpose = "USER") -> None:
-        """Creates an event from an existing internal event."""
+        """Creates an event from an existing internal event.
+
+        Args:
+            internal_event (TEvent): The preexisting internal builtin event instance.
+            purpose (Purpose, optional): The event purpose (used for testing). Defaults to "USER".
+        """
         ...
     def __init__(self, internal_event: TEvent | None = None, *, purpose: Purpose = "USER"):
         self.__lock = Lock()
@@ -43,7 +52,7 @@ class Event:
 
     @property
     def is_signaled(self) -> bool:
-        """Indicates if the underlying events flag is set or not
+        """Indicates if the event is signaled or not
         """
         return self.__internal_event.is_set()
 
@@ -58,7 +67,7 @@ class Event:
 
 
     def signal(self) -> None:
-        """Signals the underlying event, bu setting its flag to True.
+        """Signals the event.
         """
         with self.__lock:
             self.__internal_event.set()
@@ -66,7 +75,7 @@ class Event:
                 self.__notify_continuations()
 
     def clear(self) -> None:
-        """Clears the event flag
+        """Clears the event flag rendering it not signaled.
         """
         with self.__lock:
             self.__internal_event.clear()
@@ -76,11 +85,11 @@ class Event:
         timeout: float | None = None, /,
         interrupt: Interrupt | None = None,
     ) -> bool:
-        """Waits for the event to be signaled
+        """Waits for the event to be signaled.
 
         Args:
-            timeout (float, optional): The timeout in seconds. Defaults to None
-            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
+            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
             bool: A boolean value indicating if event was signaled or a timeout occurred
@@ -105,15 +114,15 @@ class Event:
         timeout: float | None = None, /,
         interrupt: Interrupt | None = None
     ) -> bool:
-        """Waits for any of the events to be signaled
+        """Waits for any of the specified events to be signaled.
 
         Args:
-            events (Sequence[Event]): The awaited events
-            timeout (float, optional): The timeout in seconds. Defaults to None.
-            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
+            events (Sequence[Event]): The awaited events.
+            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
-            bool: A boolean value indicating if any of the events were signaled or a timeout occurred
+            bool: Returns True if any of the events were signaled. Otherwise False.
         """
 
         if interrupt and interrupt.is_signaled:
@@ -121,7 +130,7 @@ class Event:
 
         combined_event = Event(purpose = "CONTINUATION")
 
-        Event.add_continuation(
+        Event._add_continuation(
             events,
             EventContinuation(
                 ContinueWhen.ANY,
@@ -147,11 +156,11 @@ class Event:
 
         Args:
             events (Sequence[Event]): The awaited events
-            timeout (float, optional): The timeout in seconds. Defaults to None.
-            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
+            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
-            bool: A boolean value indicating if any of the events were signaled or a timeout occurred
+            bool: Returns True if all of the events were signaled. Otherwise False.
         """
 
         if interrupt and interrupt.is_signaled:
@@ -159,7 +168,7 @@ class Event:
 
         combined_event = Event(purpose = "CONTINUATION")
 
-        Event.add_continuation(
+        Event._add_continuation(
             events,
             EventContinuation(
                 ContinueWhen.ALL,
@@ -175,7 +184,7 @@ class Event:
             return False
 
     @staticmethod
-    def add_continuation(events: Sequence[Event], continuation: Continuation) -> None:
+    def _add_continuation(events: Sequence[Event], continuation: Continuation) -> None:
         if continuation.interrupt and continuation.interrupt not in events:
             events = ( continuation.interrupt.wait_event, *events )
 
@@ -228,6 +237,8 @@ class Event:
                                     debugger.unregister_continuation(continuation_event, continuation)
                         finally:
                             continuation_event.__lock._internal_lock.release() # pyright: ignore[reportPrivateUsage]
+                    else:
+                        pass
 
 
     def _after_wait(self):
@@ -273,7 +284,7 @@ class Event:
 
 if current_thread() is main_thread():
     # The terminate_event is set when application is requested to exit (SIGTERM or SIGINT)
-    terminate_event = Event(purpose = "TERMINATE")
+    terminate_event: Annotated[Event, "An event which is signaled when application is requested to terminate"] = Event(purpose = "TERMINATE")
 
     def __handler(signum: int, frame: Any) -> None:
         terminate_event.signal() # pragma: no cover

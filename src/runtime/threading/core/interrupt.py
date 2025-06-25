@@ -10,7 +10,7 @@ from runtime.threading.core.lock import Lock
 LOCK = Lock()
 
 class Interrupt:
-    """The Interrupt class is used for asynchronous task cancellation. The Interrupt instance can be passed around between tasksc
+    """The Interrupt class is used for asynchronous task cancellation. The Interrupt instance can be passed around between tasks
     and used to poll for cancellation, while the InterruptSignal is used for signaling the Interrupt."""
 
     __slots__ = ["__lock", "__signal", "__notify_event", "__ex", "__linked", "__weakref__"]
@@ -37,7 +37,7 @@ class Interrupt:
 
     @property
     def wait_event(self) -> Event:
-        """The internal event, handling signaling
+        """The internal event which handles signaling.
         """
         return self.__notify_event
 
@@ -100,6 +100,13 @@ class Interrupt:
         timeout: float | None = None, /,
         interrupt: Interrupt | None = None
     ) -> bool:
-        """Waits for a signal. Same as wait_handle.wait().
+        """Waits for signal. Same as wait_handle.wait().
+
+        Args:
+            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
+
+        Returns:
+            bool: Returns True if signaled, False otherwise.
         """
         return self.__notify_event.wait(timeout, interrupt)

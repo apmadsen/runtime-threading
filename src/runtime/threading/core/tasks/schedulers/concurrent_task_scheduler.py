@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any, MutableSequence, Callable, ContextManager, cast
+from types import TracebackType
 from multiprocessing import cpu_count as get_cpu_count
 from threading import Thread, Event as TEvent, current_thread
 from contextlib import nullcontext
@@ -16,16 +17,19 @@ from runtime.threading.core.tasks.config import TASK_KEEP_ALIVE
 
 
 class ConcurrentTaskScheduler(TaskScheduler):
-    """A task scheduler for concurrent workloads, with a predefined max degree of parallelism.
+    """The ConcurrentTaskScheduler class is a task scheduler for concurrent workloads,
+    with a predefined max degree of parallelism.
     """
-    __slots__ = [
-        "__max_parallelism", "__queue",
-        "__threads", "__active_threads", "__suspended_threads",
-        "__keep_alive", "__close", "__closed"
-    ]
+    __slots__ = [ "__max_parallelism", "__queue",
+                  "__threads", "__active_threads", "__suspended_threads",
+                  "__keep_alive", "__close", "__closed" ]
 
-    def __init__(self, max_parallelism: int = get_cpu_count(), keep_alive: float = TASK_KEEP_ALIVE):
-        """Creates a new ConcurrentTaskScheduler instance
+    def __init__(
+        self,
+        max_parallelism: int = get_cpu_count(),
+        keep_alive: float = TASK_KEEP_ALIVE
+    ):
+        """Creates a new ConcurrentTaskScheduler instance.
 
         Keyword Arguments:
             max_parallelism (int, optional): The max degree of parallelism. Defaults to the no. of CPUs
@@ -47,17 +51,18 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
     @property
     def is_closed(self) -> bool:
+        """Returns True if scheduler is closed."""
         return self.__closed is not None
 
     @property
     def max_parallelism(self) -> int:
-        """The max degree of parallelism
+        """The max degree of parallelism i.e. no. of concurrent running tasks.
         """
         return self.__max_parallelism
 
     @property
     def keep_alive(self) -> float:
-        """The no. of seconds to keep threads alive, before reclaiming them
+        """The no. of seconds to keep threads alive, before reclaiming them.
         """
         return self.__keep_alive
 
@@ -70,13 +75,13 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
     @property
     def active_threads(self) -> int:
-        """The no. of currently active threads
+        """The no. of currently active threads.
         """
         return len(self.__active_threads)
 
     @property
     def suspended_threads(self) -> int:
-        """The no. of currently suspended threads
+        """The no. of currently suspended threads.
         """
         return len(self.__suspended_threads)
 
@@ -171,7 +176,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
                 return ConcurrentTaskScheduler._SuspendedTask(resume)
 
     def close(self) -> None:
-        """Closes the scheduler and waits for any scheduled tasks to finish
+        """Closes the scheduler and waits for any scheduled tasks to finish.
         """
         if self is TaskScheduler.default() and not self.finalizing:
             raise ThreadingException("Cannot close default scheduler") # pragma: no cover
@@ -196,7 +201,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
     def __enter__(self) -> ConcurrentTaskScheduler:
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None):
         self.close()
 
     def __run(self, task: Task[Any] | TEvent | None) -> None:
@@ -252,7 +257,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
 
     def _register(self) -> None:
-        """Registers the current thread on the task scheduler
+        """Registers the current thread on the task scheduler.
         """
         with self.synchronization_lock:
             super()._register()
@@ -260,7 +265,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
             self.__threads.append(cur_thread)
 
     def _unregister(self) -> None:
-        """Un-registers the current thread on the task scheduler
+        """Un-registers the current thread on the task scheduler.
         """
         with self.synchronization_lock:
             super()._unregister()
@@ -278,5 +283,5 @@ class ConcurrentTaskScheduler(TaskScheduler):
         def __enter__(self):
             return self
 
-        def __exit__(self, *exc: Any):
+        def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None):
             self.__resume()

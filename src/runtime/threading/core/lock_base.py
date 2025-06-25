@@ -13,6 +13,8 @@ if TYPE_CHECKING: # pragma: no cover
 DEBUGGING = False
 
 class LockBase:
+    """The LockBase is the base class for locks and semaphores which share much of the the same logic.
+    """
     __slots__ = ["__internal_lock"]
 
     def __init__(self, lock: RLock | TLock | Semaphore):
@@ -20,6 +22,8 @@ class LockBase:
 
     @property
     def _internal_lock(self) -> RLock | TLock | Semaphore:
+        """The internal builtin lock or semaphore.
+        """
         return self.__internal_lock
 
     def acquire(
@@ -27,6 +31,18 @@ class LockBase:
         timeout: float | None = None,
         interrupt: Interrupt | None = None
     ) -> bool:
+        """Acquires the lock.
+
+        Args:
+            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
+
+        Raises:
+            ValueError: A ValueError is raised if timeout is negative.
+
+        Returns:
+            bool: Returns True if lock was acquired, False otherwise.
+        """
         try:
             if DEBUGGING and ( debugger := get_locks_debugger() ): # pragma: no cover
                 debugger.register_lock_wait(self.__internal_lock)
@@ -65,7 +81,7 @@ class LockBase:
                 debugger.unregister_lock_wait(self.__internal_lock)
 
     def release(self):
-        """Releases the lock
+        """Releases the lock.
         """
         self.__internal_lock.release()
 
@@ -76,6 +92,6 @@ class LockBase:
         self.acquire()
 
     def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None):
-        """Releases the lock
+        """Releases the lock.
         """
         self.release()

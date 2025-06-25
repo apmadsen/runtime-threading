@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Any, ClassVar, overload
+from typing import ClassVar, overload
+from types import TracebackType
 from collections import deque
 from multiprocessing import cpu_count as get_cpu_count
 from threading import local
@@ -123,7 +124,7 @@ class PContext():
             stack.append(self)
             return self
 
-    def __exit__(self, *args: Any, **kwargs: Any) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None):
         with LOCK:
             self.__interrupt_signal.signal() # make sure that any ongoing work is canceled
 

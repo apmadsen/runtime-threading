@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     from runtime.threading.core.interrupt import Interrupt
 
 class InterruptException(ThreadingException):
+    """The InterruptException exception is raised whenever raise_if_signaled()
+    is called on a signaled Interrupt"""
     __slots__ = ["__interrupt"]
 
     def __init__(self, interrupt: Interrupt):
