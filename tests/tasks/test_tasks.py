@@ -168,95 +168,93 @@ def test_continuations(internals):
     # since starting time isn't guaranteed on sceduler and internal events
     # might not react as fast as the test requires
 
-    test_str = "test"
-    t1 = Task.plan(fn_return_value_after_time, 0.005, test_str)
-    t2 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state)
-    t3 = t2.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_CANCELED, fn_continue_and_return_result_or_state)
-    _ = t3.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue_and_return_result_or_state)
-    t4 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state_with_mods, 45, y=2)
-    t1.schedule()
+    with ConcurrentTaskScheduler(8) as scheduler:
+        test_str = "test"
+        t1 = Task.plan(fn_return_value_after_time, 0.005, test_str)
+        t2 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state)
+        t3 = t2.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_CANCELED, fn_continue_and_return_result_or_state)
+        _ = t3.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue_and_return_result_or_state)
+        t4 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state_with_mods, 45, y=2)
+        t1.schedule(scheduler)
 
-    cs5 = InterruptSignal()
-    t5 = Task.create(interrupt=cs5.interrupt).plan(fn_return_value_after_time, 0.05, test_str)
-    t6 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY, fn_continue_and_return_result_or_state)
-    t7 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_CANCELED, fn_continue_and_return_result_or_state)
-    t5.schedule()
-    sleep(0.001)
-    cs5.signal()
-    sleep(.05)
-    t7.wait()
+        cs5 = InterruptSignal()
+        t5 = Task.create(interrupt=cs5.interrupt).plan(fn_return_value_after_time, 0.05, test_str)
+        t6 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY, fn_continue_and_return_result_or_state)
+        t7 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_CANCELED, fn_continue_and_return_result_or_state)
+        t5.schedule(scheduler)
+        sleep(0.001)
+        cs5.signal()
+        sleep(.05)
+        t7.wait()
 
-    assert t4.result.endswith(" "+str(45*2))
-    with assert_raises(InterruptException):
-        t6.result # t6 is implicitly canceled and will throw an exception
+        assert t4.result.endswith(" "+str(45*2))
+        with assert_raises(InterruptException):
+            t6.result # t6 is implicitly canceled and will throw an exception
 
-
-    t8 = Task.plan(fn_return_value_after_time, 0.01, "Task 8 done")
-    t9 = Task[str].plan(fn_return_value_after_time, 0.001, "Task 9 done")
-    t10 = Task.with_any([t8, t9]).run(fn_get_first_result_from_tasks)
-    t11 = Task.with_all([t8, t9]).run(fn_get_first_result_from_tasks)
-    t14 = Task.with_all([t8, t9]).run(fn_get_count_of_tasks)
-    t8.schedule()
-    t9.schedule()
-    Task.wait_all([t10, t11])
-
-
-    assert t10.result in ("Task 8 done", "Task 9 done")
-    assert t11.result == "Task 8 done"
-    assert t14.result == 2
-
-    t13 = Task.wait_all([t10, t11])
-    t12 = Task.wait_all([
-        Task.run(fn_return_value_after_time, 0.01, "Task 121 done"),
-        Task.run(fn_return_value_after_time, 0.03, "Task 122 done"),
-        Task.run(fn_return_value_after_time, 0.02, "Task 123 done"),
-        Task.run(fn_return_value_after_time, 0.001, "Task 124 done"),
-    ])
-
-    t14 = Task.run(fn_fail_immediately, "Error")
-    assert t14.continue_with(ContinuationOptions.ON_FAILED, fn_continue_and_return_result_or_state).result == TaskState.FAILED.name
+        t8 = Task.plan(fn_return_value_after_time, 0.01, "Task 8 done")
+        t9 = Task[str].plan(fn_return_value_after_time, 0.001, "Task 9 done")
+        t10 = Task.with_any([t8, t9]).run(fn_get_first_result_from_tasks)
+        t11 = Task.with_all([t8, t9]).run(fn_get_first_result_from_tasks)
+        t12 = Task.with_all([t8, t9]).run(fn_get_count_of_tasks)
+        t8.schedule(scheduler)
+        t9.schedule(scheduler)
+        Task.wait_all([t10, t11])
 
 
-    with assert_raises(AggregateException):
-        t15 = Task.wait_any([
-            Task.run(fn_return_value_after_time, 0.1, "Task 121 done"),
-            Task.run(fn_fail_immediately, "Error"),
+        assert t10.result in ("Task 8 done", "Task 9 done")
+        assert t11.result == "Task 8 done"
+        assert t12.result == 2
+
+        Task.wait_all([t10, t11])
+        Task.wait_all([
+            Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.01, "Task 121 done"),
+            Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.03, "Task 122 done"),
+            Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.02, "Task 123 done"),
+            Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.001, "Task 124 done"),
         ])
 
-    with assert_raises(AggregateException):
-        t15 = Task.wait_all([
-            Task.run(fn_return_value_after_time, 0.01, "Task 121 done"),
-            Task.run(fn_fail_immediately, "Error"),
+        t12 = Task.create(scheduler=scheduler).run(fn_fail_immediately, "Error")
+        assert t12.continue_with(ContinuationOptions.ON_FAILED, fn_continue_and_return_result_or_state).result == TaskState.FAILED.name
+
+        with assert_raises(AggregateException):
+            Task.wait_any([
+                Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.1, "Task 121 done"),
+                Task.create(scheduler=scheduler).run(fn_fail_immediately, "Error"),
+            ])
+
+        with assert_raises(AggregateException):
+            Task.wait_all([
+                Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.01, "Task 121 done"),
+                Task.create(scheduler=scheduler).run(fn_fail_immediately, "Error"),
+            ])
+
+        signal = InterruptSignal()
+
+        with assert_raises(TaskException, match=escape(str(AwaitedTaskCanceledError))):
+            Task.wait_all([
+                Task.create(scheduler=scheduler, interrupt=signal.interrupt).run(fn_return_value_after_time, 0.01, "Task 121 done"),
+                Task.create(scheduler=scheduler, interrupt=signal.interrupt).run(fn_raise_interrupt, signal),
+            ], fail_on_cancel=True)
+
+        signal = InterruptSignal()
+
+        with assert_raises(TaskException, match=escape(str(AwaitedTaskCanceledError))):
+            Task.wait_any([
+                Task.create(scheduler=scheduler, interrupt=signal.interrupt).run(fn_return_value_after_time, 0.01, "Task 121 done"),
+                Task.create(scheduler=scheduler, interrupt=signal.interrupt).run(fn_raise_interrupt, signal),
+            ], fail_on_cancel=True)
+
+        signal = InterruptSignal()
+
+        t13 = Task.with_any([
+            Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.1, "Task 121 done"),
+        ], interrupt=signal.interrupt).run(fn_get_count_of_tasks)
+        signal.signal()
+        t13.wait()
+
+        assert Task.wait_any([
+            Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.01, "Task 121 done"),
         ])
-
-
-    signal = InterruptSignal()
-
-    with assert_raises(TaskException, match=escape(str(AwaitedTaskCanceledError))):
-        t15 = Task.wait_all([
-            Task.create(interrupt=signal.interrupt).run(fn_return_value_after_time, 0.01, "Task 121 done"),
-            Task.create(interrupt=signal.interrupt).run(fn_raise_interrupt, signal),
-        ], fail_on_cancel=True)
-
-    signal = InterruptSignal()
-
-    with assert_raises(TaskException, match=escape(str(AwaitedTaskCanceledError))):
-        t15 = Task.wait_any([
-            Task.create(interrupt=signal.interrupt).run(fn_return_value_after_time, 0.01, "Task 121 done"),
-            Task.create(interrupt=signal.interrupt).run(fn_raise_interrupt, signal),
-        ], fail_on_cancel=True)
-
-    signal = InterruptSignal()
-
-    t16 = Task.with_any([
-        Task.run(fn_return_value_after_time, 0.1, "Task 121 done"),
-    ], interrupt=signal.interrupt).run(fn_get_count_of_tasks)
-    signal.signal()
-    t16.wait()
-
-    assert  Task.wait_any([
-        Task.run(fn_return_value_after_time, 0.01, "Task 121 done"),
-    ])
 
 
 def test_lazy_task(internals):

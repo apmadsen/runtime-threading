@@ -184,7 +184,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
         wait_for_close = False
         with self.synchronization_lock:
-            self.__closed = OneTimeEvent()
+            self.__closed = OneTimeEvent(purpose = "CONCURRENT_TASK_SCHEDULER_CLOSE")
             self.__close.signal()
             wait_for_close = self.threads > 0
 

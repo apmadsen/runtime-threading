@@ -1,5 +1,6 @@
 # pyright: basic
 from os import getenv
+from gc import collect
 from typing import Any, cast
 from pytest import fixture
 from typingutils import get_type_name
@@ -15,13 +16,13 @@ from runtime.threading.core.tasks.schedulers.task_scheduler import LOCK as TASK_
 
 EVENTS_DEBUGGER: EventsDebugger | None = None
 LOCKS_DEBUGGER: LocksDebugger | None = None
-
+TAB = "  "
 
 @fixture(scope = "package")
 def internals():
     lock = RLock()
 
-    if getenv("TEST_DEBUG", "").lower() in ("1", "true"):
+    if getenv("TESTS_EXTENSIVE_DEBUGGING", "").lower() in ("1", "true"):
         global EVENTS_DEBUGGER, LOCKS_DEBUGGER
         EVENTS_DEBUGGER, LOCKS_DEBUGGER = enable_debugging()
 
@@ -37,7 +38,9 @@ def internals():
 
     yield
 
-    if getenv("TEST_DEBUG", "").lower() in ("1", "true"):
+    collect()
+
+    if getenv("TESTS_EXTENSIVE_DEBUGGING", "").lower() in ("1", "true"):
         terminate_event.signal()
         ev.wait(1)
         with lock:
@@ -60,11 +63,11 @@ def get_referrer(obj: Any) -> tuple[str] | None:
 def format_referrer(obj: Any, indent: int) -> str:
     if referrer := get_referrer(obj):
         return "".join((
-            "\n" + ("  "*indent) + line.strip()
+            "\n" + (TAB*indent) + line.strip()
             for line in referrer
         ))
     else:
-        return "  "*indent + "Unknown"
+        return TAB*indent + "Unknown"
 
 def report():
     terminate_event.wait(1)
@@ -99,10 +102,10 @@ def report_locks():
         print("\n-- LOCK WAITS:")
 
         for lock, items in waits.items():
-            print(f"  {id(lock)} : {items}")
-            # print(f"  {id(lock)} ->")
+            print(f"{TAB}{id(lock)} : {items}")
+            # print(f"{TAB}{id(lock)} ->")
             # for item in items:
-            #     print(f"    {item}")
+            #     print(f"{TAB}{TAB}{item}")
 
 def report_events():
     if not EVENTS_DEBUGGER or not (waits := EVENTS_DEBUGGER.get_waits()):
@@ -111,7 +114,7 @@ def report_events():
         print("\n-- EVENT WAITS:")
 
         for lock, items in waits.items():
-            print(f"  {id(lock)} : {items}")
+            print(f"{TAB}{id(lock)} : {items}")
             # print(f"  {id(lock)} ->")
             # for item in items:
             #     print(f"    {item}")
@@ -142,13 +145,15 @@ def report_continuations():
     else:
         print("\n-- CONTINUATIONS:")
         for continuation in set( continuation for _, continuations in continuations.items() for continuation in continuations ):
-            print(f"  {get_type_name_short(type(continuation))} {id(continuation)} {format_referrer(continuation, 2)} ->")
+
+            print(f"\n{TAB}{get_type_name_short(type(continuation))} {id(continuation)} : {continuation.is_done} {format_referrer(continuation, 3)}")
             if continuation.events:
                 print("")
                 for cont_event in tuple(continuation.events):
-                    print(f"    EVENT {id(getattr(cont_event, '_Event__internal_event'))} : {cont_event.is_signaled} ->")
-                    if event_continuations := tuple(str(id(continuation1)) for continuation1 in getattr(cont_event, "_Event__continuations")):
-                        print("      " + (", ".join(event_continuations)))
+                    event_continuations = len(tuple(continuation1 for continuation1 in getattr(cont_event, "_Event__continuations")))
+                    print(f"{TAB}{TAB}<- EVENT<{cont_event.purpose}> {id(getattr(cont_event, '_Event__internal_event'))} : {cont_event.is_signaled} -> {event_continuations} continuations")
+                    # if event_continuations := tuple(str(id(continuation1)) for continuation1 in getattr(cont_event, "_Event__continuations")):
+                    #     print("{TAB}{TAB}{TAB}" + (", ".join(event_continuations)))
 
 
 def report_tasks():
@@ -161,11 +166,11 @@ def report_tasks():
         if schedulers:
             print("\n-- TASKS:")
             for scheduler, (thread, task) in schedulers.items():
-                print(f"  SCHEDULER {id(scheduler)} :")
+                print(f"{TAB}SCHEDULER {id(scheduler)} :")
                 if task:
-                    print(f"   {thread.name} ->")
-                    print(f"     {task.id} : {task.state.name}")
+                    print(f"{TAB}{thread.name} ->")
+                    print(f"{TAB}{TAB}{task.id} : {task.state.name}")
                 else:
-                    print(f"   {thread.name} -> No task")
+                    print(f"{TAB}{thread.name} -> No task")
         else:
             print("\n-- TASKS: NONE")

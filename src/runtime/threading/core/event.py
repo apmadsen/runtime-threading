@@ -1,7 +1,7 @@
 from __future__ import annotations
 import sys
 from threading import Event as TEvent, current_thread, main_thread
-from typing import Sequence, Any, overload, TYPE_CHECKING
+from typing import Sequence, Any, Literal, overload, cast, TYPE_CHECKING
 from signal import signal, SIGTERM, SIGINT
 from time import time
 
@@ -18,23 +18,26 @@ if TYPE_CHECKING:
     from runtime.threading.core.interrupt import Interrupt
 
 DEBUGGING = False
-
+Purpose = Literal[ "USER", "TERMINATE", "CONTINUATION", "INTERRUPT_NOTIFY",
+                   "CONCURRENT_TASK_SCHEDULER_CLOSE", "TASK_NOTIFY",
+                   "CONCURRENT_QUEUE_NOTIFY", "PRODUCER_CONSUMER_QUEUE_NOTIFY" ]
 class Event:
     """A standard event used for synchronization between tasks.
     """
-    __slots__ = [ "__id", "__lock", "__internal_event", "__continuations", "__weakref__" ]
+    __slots__ = [ "__id", "__lock", "__purpose", "__internal_event", "__continuations", "__weakref__" ]
 
     @overload
-    def __init__(self) -> None:
+    def __init__(self, *, purpose: Purpose = "USER") -> None:
         """Creates a new Event.
         """
         ...
     @overload
-    def __init__(self, internal_event: TEvent) -> None:
+    def __init__(self, internal_event: TEvent, *, purpose: Purpose = "USER") -> None:
         """Creates an event from an existing internal event."""
         ...
-    def __init__(self, internal_event: TEvent | None = None):
+    def __init__(self, internal_event: TEvent | None = None, *, purpose: Purpose = "USER"):
         self.__lock = Lock()
+        self.__purpose = purpose or "USER"
         self.__internal_event = internal_event or TEvent()
         self.__continuations: set[Continuation] = set()
 
@@ -43,6 +46,11 @@ class Event:
         """Indicates if the underlying events flag is set or not
         """
         return self.__internal_event.is_set()
+
+    @property
+    def purpose(self) -> Purpose: # pragma: no cover
+        """Returns the event purpose (for testing)"""
+        return cast(Purpose, self.__purpose)
 
     @property
     def _internal_event(self) -> TEvent:
@@ -111,7 +119,7 @@ class Event:
         if interrupt and interrupt.is_signaled:
             return False
 
-        combined_event = Event()
+        combined_event = Event(purpose = "CONTINUATION")
 
         Event.add_continuation(
             events,
@@ -149,7 +157,7 @@ class Event:
         if interrupt and interrupt.is_signaled:
             return False
 
-        combined_event = Event()
+        combined_event = Event(purpose = "CONTINUATION")
 
         Event.add_continuation(
             events,
@@ -209,14 +217,17 @@ class Event:
 
         for continuation in expedited:
             for continuation_event in continuation.events:
-                continuation_event._after_wait()
-                # remove continuation on any other events as it is not done
-                if continuation in continuation_event.__continuations:
-                    with continuation_event.__lock:
-                        if continuation in continuation_event.__continuations: # check again since continuation might have been removed before acquiring the lock
-                            if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
-                                debugger.unregister_continuation(continuation_event, continuation)
-                            continuation_event.__continuations.remove(continuation)
+                # remove continuation on any other events
+                if continuation_event is not self:
+                    # use the events internal lock to avaoid task suspension
+                    if continuation_event.__lock._internal_lock.acquire(timeout = 0): # pyright: ignore[reportPrivateUsage]
+                        try:
+                            if continuation in continuation_event.__continuations: # check again since continuation might have been removed before acquiring the lock
+                                continuation_event.__continuations.remove(continuation)
+                                if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
+                                    debugger.unregister_continuation(continuation_event, continuation)
+                        finally:
+                            continuation_event.__lock._internal_lock.release() # pyright: ignore[reportPrivateUsage]
 
 
     def _after_wait(self):
@@ -262,7 +273,7 @@ class Event:
 
 if current_thread() is main_thread():
     # The terminate_event is set when application is requested to exit (SIGTERM or SIGINT)
-    terminate_event = Event()
+    terminate_event = Event(purpose = "TERMINATE")
 
     def __handler(signum: int, frame: Any) -> None:
         terminate_event.signal() # pragma: no cover

@@ -42,6 +42,10 @@ class Continuation:
     def interrupt(self) -> Interrupt | None:
         return self.__interrupt
 
+    @property
+    def is_done(self) -> bool: # pragma: no cover
+        return self.__done
+
     def try_continue(self) -> bool:
         with self.__lock:
             if self.__interrupt:

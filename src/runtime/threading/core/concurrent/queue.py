@@ -11,13 +11,13 @@ Tinput = TypeVar("Tinput")
 Toutput = TypeVar("Toutput")
 
 class Queue(Iterable[T]):
-    __slots__ = ["__head", "__tail", "__lock", "__event"]
+    __slots__ = ["__head", "__tail", "__lock", "__notify_event"]
 
     def __init__(self):
         self.__head: Queue.Node | None = None
         self.__tail: Queue.Node | None = None
         self.__lock = Lock()
-        self.__event = AutoClearEvent()
+        self.__notify_event = AutoClearEvent(purpose = "CONCURRENT_QUEUE_NOTIFY")
 
     @staticmethod
     def from_items(items: Iterable[Tinput]) -> Queue[Tinput]:
@@ -35,7 +35,7 @@ class Queue(Iterable[T]):
             if not self.__tail:
                 self.__tail = self.__head
 
-        self.__event.signal()
+        self.__notify_event.signal()
 
     def requeue(self, item: T) -> None:
         with self.__lock:
@@ -46,7 +46,7 @@ class Queue(Iterable[T]):
             if not self.__head:
                 self.__head = self.__tail
 
-        self.__event.signal()
+        self.__notify_event.signal()
 
     def try_dequeue(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> tuple[T | None, bool]:
         """Tries to dequeue an item. If queue is empty, return
@@ -97,7 +97,7 @@ class Queue(Iterable[T]):
             result, success = self.try_dequeue(timeout, interrupt)
             if success:
                 return cast(T, result)
-            elif self.__event.wait(timeout, interrupt):
+            elif self.__notify_event.wait(timeout, interrupt):
                 if interrupt is not None:
                     interrupt.raise_if_signaled()
             else:

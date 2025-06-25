@@ -28,7 +28,7 @@
                 "--cov-config=.coveragerc",
                 "./tests",
             ], "env": {
-                "TEST_DEBUG": "false"
+                "TESTS_EXTENSIVE_DEBUGGING": "false"
             }
         },
         {
@@ -43,7 +43,7 @@
                 "--profile",
                 "tests/"
             ], "env": {
-                "TEST_DEBUG": "false"
+                "TESTS_EXTENSIVE_DEBUGGING": "false"
             },
         },
     ]

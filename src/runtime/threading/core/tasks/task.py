@@ -176,7 +176,7 @@ class Task(Generic[T]):
     """
     __slots__ = [
         "__id", "__name", "__parent", "__scheduler", "__pctx", "__internal_event", "__lock", "__weakref__",
-        "__target", "__exception", "__state", "__interrupt", "__interrupt_signal", "__lazy", "__result"
+        "__target", "__exception", "__state", "__interrupt", "__interrupt_signal", "__lazy", "__result", "__target_name"
     ]
     __current_id__: ClassVar[int] = 1
 
@@ -192,10 +192,11 @@ class Task(Generic[T]):
             Task.__current_id__ += 1
 
         self.__name = name or f"Task_{self.__id}"
-        self.__internal_event = OneTimeEvent()
+        self.__internal_event = OneTimeEvent(purpose = "TASK_NOTIFY")
         self.__lock = Lock()
         self.__scheduler: TaskScheduler | None = None
         self.__target = fn
+        self.__target_name = f"{fn.__module__}.{fn.__qualname__}"
         self.__state: TaskState = TaskState.NOTSTARTED
         self.__interrupt_signal = InterruptSignal(interrupt) if interrupt is not None else InterruptSignal()
         self.__interrupt = self.__interrupt_signal.interrupt
@@ -237,6 +238,11 @@ class Task(Generic[T]):
     @property
     def parent(self) -> Task[Any] | None:
         return self.__parent
+
+    @property
+    def target(self) -> str: # pragma: no cover
+        """Returns the name of the target (for testing)."""
+        return self.__target_name
 
     @property
     def is_completed(self) -> bool:

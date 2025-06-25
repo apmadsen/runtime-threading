@@ -13,10 +13,14 @@ if TYPE_CHECKING: # pragma: no cover
 DEBUGGING = False
 
 class LockBase:
-    __slots__ = ["__lock"]
+    __slots__ = ["__internal_lock"]
 
     def __init__(self, lock: RLock | TLock | Semaphore):
-        self.__lock = lock
+        self.__internal_lock = lock
+
+    @property
+    def _internal_lock(self) -> RLock | TLock | Semaphore:
+        return self.__internal_lock
 
     def acquire(
         self,
@@ -25,7 +29,7 @@ class LockBase:
     ) -> bool:
         try:
             if DEBUGGING and ( debugger := get_locks_debugger() ): # pragma: no cover
-                debugger.register_lock_wait(self.__lock)
+                debugger.register_lock_wait(self.__internal_lock)
 
             start_time = datetime.now()
             if timeout and timeout < 0: # pragma: no cover
@@ -35,9 +39,9 @@ class LockBase:
                 interrupt.raise_if_signaled()
 
             if timeout != None and timeout <= TASK_SUSPEND_AFTER:
-                return self.__lock.acquire(True, timeout)
+                return self.__internal_lock.acquire(True, timeout)
             else:
-                if self.__lock.acquire(True, TASK_SUSPEND_AFTER):
+                if self.__internal_lock.acquire(True, TASK_SUSPEND_AFTER):
                     return True
                 elif timeout:
                     timeout -= TASK_SUSPEND_AFTER
@@ -46,7 +50,7 @@ class LockBase:
             with TaskScheduler.current().suspend():
                 if interrupt is not None:
                     while not interrupt.is_signaled:
-                        if self.__lock.acquire(True, min(POLL_INTERVAL, timeout or POLL_INTERVAL)):
+                        if self.__internal_lock.acquire(True, min(POLL_INTERVAL, timeout or POLL_INTERVAL)):
                             return True
                         elif timeout and (datetime.now()-start_time).total_seconds() >= timeout:
                             return False
@@ -54,17 +58,16 @@ class LockBase:
                     interrupt.raise_if_signaled() # pragma: no cover
                     return False # pragma: no cover
                 else:
-                    return self.__lock.acquire(True, timeout or -1)
+                    return self.__internal_lock.acquire(True, timeout or -1)
 
         finally:
             if DEBUGGING and ( debugger := get_locks_debugger() ): # pragma: no cover
-                debugger.unregister_lock_wait(self.__lock)
-
+                debugger.unregister_lock_wait(self.__internal_lock)
 
     def release(self):
         """Releases the lock
         """
-        self.__lock.release()
+        self.__internal_lock.release()
 
 
     def __enter__(self) -> None:

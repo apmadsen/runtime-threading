@@ -13,12 +13,12 @@ class Interrupt:
     """The Interrupt class is used for asynchronous task cancellation. The Interrupt instance can be passed around between tasksc
     and used to poll for cancellation, while the InterruptSignal is used for signaling the Interrupt."""
 
-    __slots__ = ["__lock", "__signal", "__event", "__ex", "__linked", "__weakref__"]
+    __slots__ = ["__lock", "__signal", "__notify_event", "__ex", "__linked", "__weakref__"]
 
     def __init__(self):
         self.__lock = Lock()
         self.__signal: int | None = None
-        self.__event = OneTimeEvent()
+        self.__notify_event = OneTimeEvent(purpose = "INTERRUPT_NOTIFY")
         self.__linked: WeakSet[Interrupt] = WeakSet()
         self.__ex: Exception | None = None
 
@@ -39,7 +39,7 @@ class Interrupt:
     def wait_event(self) -> Event:
         """The internal event, handling signaling
         """
-        return self.__event
+        return self.__notify_event
 
 
     def propagates_to(self, interrupt: Interrupt) -> bool:
@@ -80,7 +80,7 @@ class Interrupt:
             from runtime.threading.core.interrupt_exception import InterruptException
             self.__ex = InterruptException(self)
             self.__signal = signal
-            self.__event.signal()
+            self.__notify_event.signal()
 
             for interrupt in self.__linked:
                 if not interrupt.is_signaled:
@@ -102,4 +102,4 @@ class Interrupt:
     ) -> bool:
         """Waits for a signal. Same as wait_handle.wait().
         """
-        return self.__event.wait(timeout, interrupt)
+        return self.__notify_event.wait(timeout, interrupt)

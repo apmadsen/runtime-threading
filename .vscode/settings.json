@@ -15,8 +15,8 @@
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./tests",
         "-p",
+        "./tests",
         "test*.py"
     ],
     "python.analysis.typeCheckingMode": "strict",

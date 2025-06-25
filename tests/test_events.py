@@ -96,5 +96,7 @@ def test_auto_clear_event():
     ev2 = AutoClearEvent()
     ev2.signal()
     Event.wait_any([ev1,ev2])
+    assert ev2.is_signaled # ev1 will propagate first
+    ev2.wait()
     assert not ev2.is_signaled
 

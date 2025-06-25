@@ -104,7 +104,7 @@ def test_lock_async_cancellation(internals):
 def test_acquire_or_fail(internals):
     l1 = Lock(False)
     locked_event = Event()
-    int_lock = cast(TLock, getattr(l1, "_LockBase__lock")) # requires lock to be a normal Lock (ie. "Lock(False)"), not an RLock
+    int_lock = cast(TLock, l1._internal_lock) # requires lock to be a normal Lock (ie. "Lock(False)"), not an RLock
 
     with acquire_or_fail(l1, 0, lambda: Exception("Fail")):
         assert int_lock.locked()

@@ -27,7 +27,7 @@ class ProducerConsumerQueue(Generic[T]):
         """Creates a new ProducerConsumerQueue
         """
         self.__queue: Queue[T] = Queue()
-        self.__notify_event = AutoClearEvent()
+        self.__notify_event = AutoClearEvent(purpose = "PRODUCER_CONSUMER_QUEUE_NOTIFY")
         self.__is_complete = False
         self.__is_failed = False
         self.__is_async = False
