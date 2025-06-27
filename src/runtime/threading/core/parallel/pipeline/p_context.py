@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import ClassVar, overload
 from types import TracebackType
 from collections import deque
-from multiprocessing import cpu_count as get_cpu_count
 from threading import local
 
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
@@ -10,14 +9,14 @@ from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.lock import Lock
 from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
+from runtime.threading.core.tasks.config import DEFAULT_PARALLELISM
 
-LOCK = Lock()
 class Stack(local):
     __stack: deque[PContext] | None
 
     def get(self) -> deque[PContext]:
         if not hasattr(self, "_Stack__stack") or self.__stack is None:
-            self.__stack = deque((PContext(get_cpu_count()),))
+            self.__stack = deque((PContext(DEFAULT_PARALLELISM),))
         return self.__stack
 
     def try_register(self, context: PContext) -> bool:
@@ -38,22 +37,33 @@ class Stack(local):
             return False
 
 
+LOCK = Lock()
 STACK = Stack()
+
 class PContext():
+    """The PContext class is used for setting up parallel contexts which in turn provides parallelism options,
+    interrupts and schedulers to parallel pipelines.
+    """
+
     __slots__ = [ "__id", "__max_parallelism", "__scheduler", "__interrupt_signal" ]
     __current__id__: ClassVar[int] = 0
 
     @overload
     def __init__(self, max_parallelism: int, /) -> None:
-        """Creates a new parallel context
+        """Creates a new parallel context.
 
         Args:
             max_parallelism (int): The max no. of parallel threads.
         """
         ...
     @overload
-    def __init__(self, max_parallelism: int, /, interrupt: Interrupt | None = None, scheduler: TaskScheduler | None = None) -> None:
-        """Creates a new parallel context
+    def __init__(
+        self,
+        max_parallelism: int, /,
+        interrupt: Interrupt | None = None,
+        scheduler: TaskScheduler | None = None
+    ) -> None:
+        """Creates a new parallel context.
 
         Args:
             max_parallelism (int): The max no. of parallel threads.
@@ -80,41 +90,49 @@ class PContext():
 
     @property
     def id(self) -> int:
+        """The ID of the PContext instance."""
         return self.__id # pragma: no cover
 
     @property
     def max_parallelism(self) -> int:
+        """The max degree of parallelism a parallel operation should use."""
         return self.__max_parallelism
 
     @property
     def scheduler(self) -> TaskScheduler:
+        """The scheduler for internal tasks."""
         return self.__scheduler
 
     @property
     def interrupt(self) -> Interrupt:
+        """The external Interrupt used to cancel a parallel operation."""
         return self.__interrupt_signal.interrupt
 
     @staticmethod
     def root() -> PContext:
-        """Returns the root parallel context
+        """Returns the root parallel context. This is created automatically on a per-thread basis.
         """
         with LOCK:
             return STACK.get()[0]
 
     @staticmethod
     def current() -> PContext:
-        """Returns the current parallel context
+        """Returns the current parallel context. Defaults to the root context.
         """
         with LOCK:
             return STACK.get()[-1]
 
     @staticmethod
-    def register(parent: PContext) -> bool:
+    def _register(parent: PContext) -> bool:
+        """Used internally by tasks to register the context that the task was created in
+        as a child context to the thread used by the task."""
         with LOCK:
             return STACK.try_register(parent)
 
     @staticmethod
-    def unregister(parent: PContext) -> bool:
+    def _unregister(parent: PContext) -> bool:
+        """Used internally by tasks to unregister the context that the task was created in
+        as a child context to the thread used by the task."""
         with LOCK:
             return STACK.try_unregister(parent)
 

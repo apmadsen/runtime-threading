@@ -4,17 +4,21 @@ from runtime.threading.core.tasks.continuation_options import ContinuationOption
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
 from runtime.threading.core.interrupt_exception import InterruptException
-from runtime.threading.core.threading_exception import ThreadingException
+from runtime.threading.core.parallel.parallel_exception import ParallelException
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
-from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.parallel.for_each import for_each
 
 T = TypeVar("T")
 
-DistributionAlreadyStartedError = ThreadingException("Distribution has already begun")
+DistributionAlreadyStartedError = ParallelException("Distribution has already begun")
 
 class Distributor(Generic[T]):
+    """The Distributor class is used for processing a no. of items on multiple consumers simultaneously.
+    The items aren't divided amongst the consumers, but duplicated thus enabling multiple consumers
+    to process the same work.
+    """
     __slots__ = ["__queue_in", "__queues_out", "__sealed"]
 
     def __init__(self, items: Iterable[T]):
@@ -24,7 +28,7 @@ class Distributor(Generic[T]):
 
 
     def start(self, interrupt: Interrupt | None = None) -> None:
-        """Seals distributor
+        """Seals distributor and begins distributing.
 
         Args:
             interrupt (Interrupt, optional): The Interrupt. Defaults to None.
@@ -71,10 +75,11 @@ class Distributor(Generic[T]):
         Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).run(cancel)
 
     def take(self) -> PIterable[T]:
-        """Adds a consumer to the distributor instance
+        """Adds a consumer to the distributor instance. Note that any work already done by other consumers,
+        will be lost at this point, so it's better to add all consumers before adding any work.
 
         Returns:
-            Iterable[T]: An iterable
+            PIterable[T]: An iterable
         """
         if self.__sealed:
             raise DistributionAlreadyStartedError

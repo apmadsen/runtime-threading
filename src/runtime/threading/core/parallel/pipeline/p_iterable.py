@@ -7,6 +7,9 @@ T = TypeVar("T", covariant=True)
 
 @runtime_checkable
 class PIterable(Iterable[T], Protocol):
+    """The PIterable class is a protocol for parallel Iterables which allows for
+    interruptable iterations with timeouts.
+    """
 
     @overload
     def drain(self) -> None:

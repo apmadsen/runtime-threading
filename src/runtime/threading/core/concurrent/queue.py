@@ -11,6 +11,8 @@ Tinput = TypeVar("Tinput")
 Toutput = TypeVar("Toutput")
 
 class Queue(Iterable[T]):
+    """The Queue class is a thread-safe doubly linked LIFO queue.
+    """
     __slots__ = ["__head", "__tail", "__lock", "__notify_event"]
 
     def __init__(self):
@@ -21,12 +23,25 @@ class Queue(Iterable[T]):
 
     @staticmethod
     def from_items(items: Iterable[Tinput]) -> Queue[Tinput]:
+        """Creates a new queue with preexisting items in it.
+
+        Args:
+            items (Iterable[Tinput]): The items to add.
+
+        Returns:
+            Queue[Tinput]: Returns a new queue.
+        """
         queue: Queue[Tinput] = Queue()
         for item in items:
             queue.enqueue(item)
         return queue
 
     def enqueue(self, item: T) -> None:
+        """Adds an item to the beginning of the queue.
+
+        Args:
+            item (T): The item.
+        """
         with self.__lock:
             node = Queue.Node(item, None, self.__head)
             if self.__head:
@@ -38,6 +53,12 @@ class Queue(Iterable[T]):
         self.__notify_event.signal()
 
     def requeue(self, item: T) -> None:
+        """Adds an item to the end of the queue. This is used in cases when a consumer
+        is unsuccessful processing an item, and that item should be processed asap by another.
+
+        Args:
+            item (T): The item.
+        """
         with self.__lock:
             node = Queue.Node(item, self.__tail, None)
             if self.__tail:
@@ -49,14 +70,14 @@ class Queue(Iterable[T]):
         self.__notify_event.signal()
 
     def try_dequeue(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> tuple[T | None, bool]:
-        """Tries to dequeue an item. If queue is empty, return
+        """Tries to dequeue an item. If queue is empty
 
         Args:
             timeout (float | None, optional): The operation timout. Defaults to None.
             interrupt (Interrupt, optional): The Interrupt. Defaults to None.
 
         Raises:
-            TimeoutError: Raises a TimeoutError if operation times out
+            TimeoutError: Raises a TimeoutError if operation times out.
 
         Returns:
             tuple[T | None, bool]: Returns a tuple containing the dequeued item and the operation result.
@@ -91,7 +112,7 @@ class Queue(Iterable[T]):
             interrupt (Interrupt, optional): The Interrupt. Defaults to None.
 
         Raises:
-            TimeoutError: Raises a TimeoutError if operation times out
+            TimeoutError: Raises a TimeoutError if operation times out.
         """
         while True:
             result, success = self.try_dequeue(timeout, interrupt)

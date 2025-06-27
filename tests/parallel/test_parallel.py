@@ -55,7 +55,7 @@ def test_process(internals):
     assert facit == result
 
     # test with a ProducerConsumerQueue iterable
-    pcq_items = pipeline.ProducerConsumerQueue[int](items)
+    pcq_items = parallel.ProducerConsumerQueue[int](items)
     output = parallel.process(pcq_items.get_iterator(), parallelism = 5).do(fn_process)
     result = sorted([ item for item in output ])
 
@@ -100,7 +100,7 @@ def test_process_cancel(internals):
 
 
 def test_for_each(internals):
-    queue = pipeline.ProducerConsumerQueue[int]()
+    queue = parallel.ProducerConsumerQueue[int]()
     def fn(task: Task[Any], s: int) -> None:
         queue.put(s)
 
@@ -120,7 +120,7 @@ def test_for_each(internals):
     assert len(items) == count
 
     with pipeline.PContext(4) as ctx:
-        queue = pipeline.ProducerConsumerQueue[int]()
+        queue = parallel.ProducerConsumerQueue[int]()
         t2 = parallel.for_each(items, parallelism=ctx.max_parallelism,interrupt=ctx.interrupt).do(fn)
         t2.wait()
         queue.complete()

@@ -8,7 +8,7 @@ from runtime.threading.core.tasks.continuation_options import ContinuationOption
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
-from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue, ProducerConsumerQueueIterator
+from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue, ProducerConsumerQueueIterator
 from runtime.threading.core.tasks.helpers import get_function_name
 
 Tin = TypeVar("Tin")
@@ -16,6 +16,8 @@ Tout = TypeVar("Tout")
 P = ParamSpec("P")
 
 class ProcessProto(Generic[Tin]):
+    """The ProcessProto class is an intermediary wrapper used to create a parallel process.
+    """
     __slots__ = [ "__items", "__task_name", "__parallelism", "__interrupt", "__scheduler" ]
 
     def __init__(
@@ -39,6 +41,14 @@ class ProcessProto(Generic[Tin]):
         *args: P.args,
         **kwargs: P.kwargs
     ) -> PIterable[Tout]:
+        """Initiates parallel processing immediately.
+
+        Args:
+            fn (Callable[Concatenate[Task[Any], Tin, P], Iterable[Tout]]): The target function
+
+        Returns:
+            PIterable[Tout]: Returns an iterator.
+        """
         ...
     @overload
     def do(
@@ -48,6 +58,14 @@ class ProcessProto(Generic[Tin]):
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[None]:
+        """Initiates parallel processing immediately and outputs data to an existing queue.
+
+        Args:
+            fn (Callable[Concatenate[Task[Any], Tin, P], Iterable[Tout]]): The target function
+
+        Returns:
+            PIterable[Tout]: Returns a task.
+        """
         ...
     def do(
         self,
@@ -122,6 +140,18 @@ def process(
     interrupt: Interrupt | None = None,
     scheduler: TaskScheduler | None = None,
 ) -> ProcessProto[Tin]:
+    """Initiates a parallel process.
+
+    Args:
+        items (Iterable[Tin]): The items to process.
+        task_name (str | None, optional): A custon task name. Defaults to None.
+        parallelism (int | None, optional): The no. of tasks to run. Defaults to None.
+        interrupt (Interrupt | None, optional): An external Interrupt for the operation. Defaults to None.
+        scheduler (TaskScheduler | None, optional): The scheduler upon which the tasks will be scheduled. Defaults to None.
+
+    Returns:
+        ProcessProto[Tin]: Returns a ProcessProto wrapper.
+    """
 
     return ProcessProto(
         items,

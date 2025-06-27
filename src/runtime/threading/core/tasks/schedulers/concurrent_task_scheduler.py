@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Any, MutableSequence, Callable, ContextManager, cast
 from types import TracebackType
-from multiprocessing import cpu_count as get_cpu_count
 from threading import Thread, Event as TEvent, current_thread
 from contextlib import nullcontext
 
@@ -13,7 +12,7 @@ from runtime.threading.core.tasks.task_state import TaskState
 from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.concurrent.queue import Queue
 from runtime.threading.core.interrupt_signal import InterruptSignal
-from runtime.threading.core.tasks.config import TASK_KEEP_ALIVE
+from runtime.threading.core.tasks.config import TASK_KEEP_ALIVE, DEFAULT_PARALLELISM
 
 
 class ConcurrentTaskScheduler(TaskScheduler):
@@ -26,7 +25,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
     def __init__(
         self,
-        max_parallelism: int = get_cpu_count(),
+        max_parallelism: int = DEFAULT_PARALLELISM,
         keep_alive: float = TASK_KEEP_ALIVE
     ):
         """Creates a new ConcurrentTaskScheduler instance.

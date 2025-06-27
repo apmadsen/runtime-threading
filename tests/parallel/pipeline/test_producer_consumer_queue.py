@@ -5,8 +5,8 @@ from re import escape
 from random import randint
 from pytest import raises as assert_raises, fixture
 
-from runtime.threading.parallel.pipeline import ProducerConsumerQueue, PipelineException
-from runtime.threading.core.parallel.pipeline.producer_consumer_queue import QueueCompletedError, QueueLinkedToAnotherQueueError
+from runtime.threading.parallel import ProducerConsumerQueue, ParallelException
+from runtime.threading.core.parallel.producer_consumer_queue import QueueCompletedError, QueueLinkedToAnotherQueueError
 from runtime.threading import InterruptSignal
 
 def test_basics(internals):
@@ -31,23 +31,23 @@ def test_basics(internals):
     pcq1.put_many_async(items1).wait()
     pcq1.complete()
 
-    with assert_raises(PipelineException, match=escape(str(QueueCompletedError))):
+    with assert_raises(ParallelException, match=escape(str(QueueCompletedError))):
         pcq1.put(1)
-    with assert_raises(PipelineException, match=escape(str(QueueLinkedToAnotherQueueError))):
+    with assert_raises(ParallelException, match=escape(str(QueueLinkedToAnotherQueueError))):
         pcq2.put(1)
 
-    with assert_raises(PipelineException, match=escape(str(QueueCompletedError))):
+    with assert_raises(ParallelException, match=escape(str(QueueCompletedError))):
         pcq1.put_many((1,2,3))
-    with assert_raises(PipelineException, match=escape(str(QueueLinkedToAnotherQueueError))):
+    with assert_raises(ParallelException, match=escape(str(QueueLinkedToAnotherQueueError))):
         pcq2.put_many((1,2,3))
 
-    with assert_raises(PipelineException, match=escape(str(QueueCompletedError))):
+    with assert_raises(ParallelException, match=escape(str(QueueCompletedError))):
         pcq1.complete()
 
-    with assert_raises(PipelineException, match=escape(str(QueueLinkedToAnotherQueueError))):
+    with assert_raises(ParallelException, match=escape(str(QueueLinkedToAnotherQueueError))):
         pcq2.complete()
 
-    with assert_raises(PipelineException, match=escape(str(QueueLinkedToAnotherQueueError))):
+    with assert_raises(ParallelException, match=escape(str(QueueLinkedToAnotherQueueError))):
         pcq2.fail_if_not_complete(Exception("Fail"))
 
     items = []

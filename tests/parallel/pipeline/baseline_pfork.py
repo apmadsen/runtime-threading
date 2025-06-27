@@ -5,7 +5,8 @@ from pytest import raises as assert_raises, fixture
 
 from runtime.threading import InterruptSignal, Interrupt
 from runtime.threading.tasks import Task, AggregateException
-from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, ProducerConsumerQueue
+from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext
+from runtime.threading.parallel import ProducerConsumerQueue
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
 
 def baseline_pfork(parallelism: tuple[int, ...], count: int):

@@ -11,6 +11,8 @@ T = TypeVar("T")
 
 
 class BackgroundProto:
+    """The BackgroundProto class is an intermediary wrapper used to create a parallel background process.
+    """
     __slots__ = [ "__task_name", "__parallelism", "__interrupt", "__scheduler" ]
     __default__: ClassVar[BackgroundProto | None] = None
 
@@ -46,6 +48,14 @@ class BackgroundProto:
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[None]:
+        """Initiates parallel processing immediately.
+
+        Args:
+            fn (Callable[Concatenate[Task[None], P], None]): The target function
+
+        Returns:
+            Task[None]. Returns a task.
+        """
 
         parallelism = max(1, self.__parallelism or 2)
 
@@ -69,5 +79,16 @@ def background(
     interrupt: Interrupt | None = None,
     scheduler: TaskScheduler | None = None
 ) -> BackgroundProto:
+    """Initiates a parallel background process.
+
+    Args:
+        task_name (str | None, optional): A custon task name. Defaults to None.
+        parallelism (int | None, optional): The no. of tasks to run. Defaults to None.
+        interrupt (Interrupt | None, optional): An external Interrupt for the operation. Defaults to None.
+        scheduler (TaskScheduler | None, optional): The scheduler upon which the tasks will be scheduled. Defaults to None.
+
+    Returns:
+        BackgroundProto: Returns a BackgroundProto wrapper.
+    """
 
     return BackgroundProto(task_name, parallelism, interrupt, scheduler)

@@ -6,7 +6,7 @@ import collections.abc
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
 from runtime.threading.core.parallel.process import process
-from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.parallel.pipeline.p_context import PContext
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 
@@ -15,31 +15,36 @@ Tout = TypeVar("Tout", covariant=True)
 Tnext = TypeVar("Tnext", covariant=True)
 
 class PFn(Generic[Tin, Tout]):
+    """The PFn class (short for Parallel Function) is the heart of the parallel pipelines. It uses
+    parallel.process() internally to process the work it's given and gets its parameters from the
+    PContext parallel context.
+    """
+
     __slots__ = ["__fn", "_parent", "_parallelism"]
 
     @overload
     def __init__(self, fn: Callable[[Task[Tout], Tin], Iterable[Tout]]) -> None:
-        """Creates a new parallel function
+        """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Tin, Task[Tout]], Iterable[Tout]]): The function to parallelize
+            fn (Callable[[Task[Tout], Tin]): The function to parallelize
         """
         ...
     @overload
-    def __init__(self, fn:Callable[[Task[Tout], Tin], Iterable[Tout]], parallelism: int) -> None:
-        """Creates a new parallel function
+    def __init__(self, fn: Callable[[Task[Tout], Tin], Iterable[Tout]], parallelism: int) -> None:
+        """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Tin, Task[Tout]], Iterable[Tout]]): The function to parallelize
+            fn (Callable[[Task[Tout], Tin]): The function to parallelize
             parallelism (int): An int between 1 and 32 representing the max no. of parallel threads.
         """
         ...
     @overload
     def __init__(self, fn: Callable[[Task[Tout], Tin], Iterable[Tout]], parallelism: float) -> None:
-        """Creates a new parallel function
+        """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Tin, Task[Tout]], Iterable[Tout]]): The function to parallelize
+            fn (Callable[[Task[Tout], Tin]): The function to parallelize
             parallelism (float): A float between 0.0 and 1.0 representing the no. of parallel threads relative to the max parallelism of the current PContext
         """
         ...
@@ -120,6 +125,9 @@ class PFn(Generic[Tin, Tout]):
 
 
 class NullPFn(PFn[Any, Any]):
+    """The NullPFn class is an extension of the base PFn class that simply just relays any work items to the next PFn in the pipeline.
+    It's ideal for creating a pipeline which should fork its work.
+    """
     def __init__(self):
         """Override standard PFn constructor"""
         pass

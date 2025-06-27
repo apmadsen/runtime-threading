@@ -4,7 +4,7 @@ from typing import TypeVar, Sequence, MutableSequence, Iterable, Any, cast
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 from runtime.threading.core.parallel.pipeline.p_context import PContext
 from runtime.threading.core.parallel.pipeline.p_fn import PFn
-from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
@@ -15,10 +15,13 @@ Tin = TypeVar("Tin")
 Tout = TypeVar("Tout")
 
 class PFork(PFn[Tin, Tout]):
+    """The PFork class is an extension of the base PFn class which forks out the same work items to a number
+    of parallel functions simultaneously.
+    """
     __slots__ = ["__fns", "__tasks", "__queue_out", "__queues"]
 
     def __init__(self, fns: Sequence[PFn[Tin, Tout]]):
-        """Creates a new parallel forked function
+        """Creates a new parallel forked function.
 
         Args:
             fns (Sequence[PFn[Tin, Tout]]): The fork functions to parallelize

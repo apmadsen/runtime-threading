@@ -36,6 +36,8 @@ AwaitedTaskCanceledError = TaskException("One or more awaited tasks were cancele
 LOCK = Lock()
 
 class TaskProto:
+    """The TaskProto class is a Task creation wrapper, used to create new tasks in an easy way.
+    """
     __slots__ = [ "__name", "__interrupt", "__scheduler", "__lazy" ]
     __default__: ClassVar[TaskProto | None] = None
 
@@ -141,6 +143,8 @@ class TaskProto:
         return Task.create(interrupt = self.__interrupt).run(fn_sleep).continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue, *args, **kwargs)
 
 class ContinuationProto:
+    """The ContinuationProto class is a Task creation wrapper, used to create task continuations in an easy way.
+    """
     __slots__ = [ "__tasks", "__name", "__interrupt", "__when", "__options" ]
 
     def __init__(
@@ -435,7 +439,7 @@ class Task(Generic[T]):
             self.__transition_to(TaskState.RUNNING)
 
         try:
-            if self.__pctx and TaskScheduler.current() is self.__pctx.scheduler and PContext.register(self.__pctx):
+            if self.__pctx and TaskScheduler.current() is self.__pctx.scheduler and PContext._register(self.__pctx):
                 pass
             else:
                 self.__pctx = None
@@ -462,7 +466,7 @@ class Task(Generic[T]):
                 self.__transition_to(TaskState.FAILED)
         finally:
             if self.__pctx:
-                PContext.unregister(self.__pctx)
+                PContext._unregister(self.__pctx)
                 self.__pctx = None
             self.__internal_event.signal()
 
@@ -659,7 +663,7 @@ class Task(Generic[T]):
             interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
-            ContinuationProto: Returns a continuation wrapper.
+            ContinuationProto: Returns a ContinuationProto wrapper.
         """
         return ContinuationProto(tasks, ContinueWhen.ANY, options = options, interrupt = interrupt)
 
@@ -678,7 +682,7 @@ class Task(Generic[T]):
             interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
-            ContinuationProto: Returns a continuation wrapper.
+            ContinuationProto: Returns a ContinuationProto wrapper.
         """
         return ContinuationProto(tasks, ContinueWhen.ALL, options = options, interrupt = interrupt)
 
@@ -700,7 +704,7 @@ class Task(Generic[T]):
             lazy (bool, optional): Specifies if task can be lazily started or not. Defaults to False.
 
         Returns:
-            TaskProto: Returns a task wrapper.
+            TaskProto: Returns a TaskProto wrapper.
         """
         return TaskProto(name, interrupt, scheduler, lazy)
 

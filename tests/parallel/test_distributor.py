@@ -6,8 +6,7 @@ from pytest import raises as assert_raises, fixture
 
 from runtime.threading import InterruptSignal, Interrupt, ThreadingException, InterruptException
 from runtime.threading.tasks import AggregateException
-from runtime.threading.parallel import distribute
-from runtime.threading.parallel.pipeline import ProducerConsumerQueue
+from runtime.threading.parallel import distribute, ProducerConsumerQueue
 
 def test_basics(internals):
     queue = ProducerConsumerQueue[str]()

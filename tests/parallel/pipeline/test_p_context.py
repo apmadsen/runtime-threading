@@ -6,7 +6,8 @@ from re import escape
 
 from runtime.threading import InterruptSignal, Interrupt, InterruptException
 from runtime.threading.tasks import Task, AggregateException, TaskCanceledError, TaskException
-from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, PFork, ProducerConsumerQueue
+from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, PFork
+from runtime.threading.parallel import ProducerConsumerQueue
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler, TaskScheduler
 
 from tests.shared_functions import fn_return_value_after_time

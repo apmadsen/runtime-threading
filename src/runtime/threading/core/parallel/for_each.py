@@ -4,7 +4,7 @@ from collections.abc import Sized
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
-from runtime.threading.core.parallel.pipeline.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.tasks.helpers import get_function_name
 
 P = ParamSpec("P")
@@ -12,6 +12,8 @@ T = TypeVar("T")
 
 
 class ForEachProto(Generic[T]):
+    """The ForEachProto class is an intermediary wrapper used to create a parallel for-each process.
+    """
     __slots__ = [ "__items", "__task_name", "__parallelism", "__interrupt", "__scheduler" ]
 
     def __init__(
@@ -34,6 +36,14 @@ class ForEachProto(Generic[T]):
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Task[None]:
+        """Initiates parallel for-each process immediately.
+
+        Args:
+            fn (Callable[Concatenate[Task[None], T, P], None]): The target function
+
+        Returns:
+            Task[None]. Returns a task.
+        """
 
         parallelism = max(1, self.__parallelism or 2)
 
@@ -70,16 +80,17 @@ def for_each(
     interrupt: Interrupt | None = None,
     scheduler: TaskScheduler | None = None
 ) -> ForEachProto[T]:
-    """Performs work on each item in parallel.
-    Note that PContext is used internally to get a scheduler instance and parallelism, if None, is set to the context's max_parallelism property.
+    """Initiates a parallel for-each process.
 
     Args:
-        items (Iterable[T]): The source items
-        fn (Callable[T, Task]): The target function
-        interrupt (Interrupt, optional): The Interrupt. Defaults to Defaults to None.
+        items (Iterable[T]): The items to process.
+        task_name (str | None, optional): A custon task name. Defaults to None.
+        parallelism (int | None, optional): The no. of tasks to run. Defaults to None.
+        interrupt (Interrupt | None, optional): An external Interrupt for the operation. Defaults to None.
+        scheduler (TaskScheduler | None, optional): The scheduler upon which the tasks will be scheduled. Defaults to None.
 
     Returns:
-        Task: A continuation task
+        ForEachProto[Tin]: Returns a ProcessProto wrapper.
     """
 
     return ForEachProto(items, task_name, parallelism, interrupt, scheduler)

@@ -231,6 +231,8 @@ class Event:
                     # use the events internal lock to avaoid task suspension
                     if continuation_event.__lock._internal_lock.acquire(timeout = 0): # pyright: ignore[reportPrivateUsage]
                         try:
+                            if continuation_event.is_signaled:
+                                continuation_event._after_wait()
                             if continuation in continuation_event.__continuations: # check again since continuation might have been removed before acquiring the lock
                                 continuation_event.__continuations.remove(continuation)
                                 if DEBUGGING and ( debugger := get_events_debugger() ): # pragma: no cover
@@ -239,6 +241,8 @@ class Event:
                             continuation_event.__lock._internal_lock.release() # pyright: ignore[reportPrivateUsage]
                     else:
                         pass
+
+        self._after_wait()
 
 
     def _after_wait(self):
