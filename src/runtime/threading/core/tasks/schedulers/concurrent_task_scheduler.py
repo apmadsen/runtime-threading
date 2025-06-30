@@ -30,7 +30,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
     ):
         """Creates a new ConcurrentTaskScheduler instance.
 
-        Keyword Arguments:
+        Arguments:
             max_parallelism (int, optional): The max degree of parallelism. Defaults to the no. of CPUs
             keep_alive (float, optional): The no. of seconds to keep threads alive, before reclaiming them. Defaults to 0.1
         """
@@ -50,12 +50,13 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
     @property
     def is_closed(self) -> bool:
-        """Returns True if scheduler is closed."""
+        """Returns True if scheduler is closed.
+        """
         return self.__closed is not None
 
     @property
     def max_parallelism(self) -> int:
-        """The max degree of parallelism i.e. no. of concurrent running tasks.
+        """The max degree of parallelism i.e. no. active tasks.
         """
         return self.__max_parallelism
 
@@ -66,7 +67,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
         return self.__keep_alive
 
     @property
-    def threads(self) -> int:
+    def allocated_threads(self) -> int:
         """The no. of currently allocated threads. This does not include suspended threads.
         """
         with self.synchronization_lock:
@@ -190,7 +191,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
         with self.synchronization_lock:
             self.__closed = OneTimeEvent(purpose = "CONCURRENT_TASK_SCHEDULER_CLOSE")
             self.__close.signal()
-            wait_for_close = self.threads > 0
+            wait_for_close = self.allocated_threads > 0
 
         if wait_for_close:
             self.__closed.wait()

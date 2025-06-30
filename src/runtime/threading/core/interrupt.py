@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, cast
+from typing import Callable, ClassVar, cast
 from weakref import WeakSet
 from collections import deque
 
@@ -10,10 +10,11 @@ from runtime.threading.core.lock import Lock
 LOCK = Lock()
 
 class Interrupt:
-    """The Interrupt class is used for asynchronous task cancellation. The Interrupt instance can be passed around between tasks
-    and used to poll for cancellation, while the InterruptSignal is used for signaling the Interrupt."""
+    """The Interrupt class is used for asynchronous task interruption. The Interrupt instance can be passed around between tasks
+    and used to poll for interruption, while the InterruptSignal is used for signaling the Interrupt."""
 
     __slots__ = ["__lock", "__signal", "__notify_event", "__ex", "__linked", "__weakref__"]
+    __none__: ClassVar[Interrupt | None] = None
 
     def __init__(self):
         self.__lock = Lock()
@@ -25,13 +26,15 @@ class Interrupt:
 
     @property
     def is_signaled(self) -> bool:
-        """Indicates if Interrupt has been signaled
+        """Indicates if Interrupt has been signaled.
         """
         with self.__lock:
             return self.__signal is not None
 
     @property
     def signal_id(self) -> int | None:
+        """The id of the signal (if signaled).
+        """
         with self.__lock:
             return self.__signal
 
@@ -43,9 +46,9 @@ class Interrupt:
 
 
     def propagates_to(self, interrupt: Interrupt) -> bool:
-        """Indicates if this Interrupt instance is linked to other Interrupt. If true,
-        signaling this Interrupt will propagate signal onto the other.
-        Note: This information is not available after Interrupt has been signaled...
+        """Indicates if this interrupt instance is linked to other interrupt. If true,
+        signaling this interrupt will propagate signal onto the other.
+        Note: This information is not available after interrupt has been signaled...
         """
         return self.__propagates_to(interrupt, deque())
 
@@ -60,6 +63,15 @@ class Interrupt:
                     return True
 
         return False
+
+    @staticmethod
+    def none() -> Interrupt:
+        """Returns a default interrupt which will never be signaled.
+        """
+        with LOCK:
+            if Interrupt.__none__ is None:
+                Interrupt.__none__ = Interrupt()
+            return Interrupt.__none__
 
     @staticmethod
     def _create(*linked_interrupts: Interrupt) -> tuple[Interrupt, Callable[[int], None]]:
@@ -103,7 +115,7 @@ class Interrupt:
         """Waits for signal. Same as wait_handle.wait().
 
         Args:
-            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            timeout (float | None, optional): Timeout (seconds) before returning False. Defaults to None.
             interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:

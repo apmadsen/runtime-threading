@@ -11,7 +11,7 @@ Tinput = TypeVar("Tinput")
 Toutput = TypeVar("Toutput")
 
 class Queue(Iterable[T]):
-    """The Queue class is a thread-safe doubly linked LIFO queue.
+    """The Queue class is a thread-safe doubly linked FIFO queue.
     """
     __slots__ = ["__head", "__tail", "__lock", "__notify_event"]
 
@@ -37,7 +37,7 @@ class Queue(Iterable[T]):
         return queue
 
     def enqueue(self, item: T) -> None:
-        """Adds an item to the beginning of the queue.
+        """Adds an item to the end of the queue.
 
         Args:
             item (T): The item.
@@ -53,7 +53,7 @@ class Queue(Iterable[T]):
         self.__notify_event.signal()
 
     def requeue(self, item: T) -> None:
-        """Adds an item to the end of the queue. This is used in cases when a consumer
+        """Adds an item to the beginning of the queue. This is used in cases when a consumer
         is unsuccessful processing an item, and that item should be processed asap by another.
 
         Args:
@@ -70,14 +70,11 @@ class Queue(Iterable[T]):
         self.__notify_event.signal()
 
     def try_dequeue(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> tuple[T | None, bool]:
-        """Tries to dequeue an item. If queue is empty
+        """Tries to dequeue an item. If queue is empty or a timeout occurs, a default value or 'None, False' is returned.
 
         Args:
             timeout (float | None, optional): The operation timout. Defaults to None.
             interrupt (Interrupt, optional): The Interrupt. Defaults to None.
-
-        Raises:
-            TimeoutError: Raises a TimeoutError if operation times out.
 
         Returns:
             tuple[T | None, bool]: Returns a tuple containing the dequeued item and the operation result.
@@ -101,8 +98,7 @@ class Queue(Iterable[T]):
             finally:
                 self.__lock.release()
         else:
-            # raise TimeoutError
-            return None, False
+            return None, False # pragma: no cover
 
     def dequeue(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> T:
         """Dequeues an item. If queue is empty, operation waits for an item to be added.

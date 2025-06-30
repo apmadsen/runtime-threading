@@ -3,7 +3,7 @@ from typing import overload
 from runtime.threading.core.interrupt import Interrupt
 
 class InterruptSignal:
-    """The InterruptSignal class is used to cancel tasks asynchronously
+    """The InterruptSignal class is used to interrupt tasks asynchronously
     by signaling an underlying Interrupt instance.
     """
 

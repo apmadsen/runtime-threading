@@ -9,7 +9,8 @@ from runtime.threading.core.helpers import acquire_or_fail, signal_after
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.interrupt import Interrupt
 
-sleep = terminate_event.wait
+def sleep(time: float, /, interrupt: Interrupt | None = None) -> None:
+    terminate_event.wait(time)
 
 __all__ = [
     'Event',

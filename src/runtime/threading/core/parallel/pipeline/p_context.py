@@ -105,7 +105,7 @@ class PContext():
 
     @property
     def interrupt(self) -> Interrupt:
-        """The external Interrupt used to cancel a parallel operation."""
+        """The external Interrupt used to interrupt a parallel operation."""
         return self.__interrupt_signal.interrupt
 
     @staticmethod
@@ -144,7 +144,7 @@ class PContext():
 
     def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None):
         with LOCK:
-            self.__interrupt_signal.signal() # make sure that any ongoing work is canceled
+            self.__interrupt_signal.signal() # make sure that any ongoing work is interrupted
 
             del self.__scheduler
             del self.__interrupt_signal

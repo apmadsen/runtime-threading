@@ -5,7 +5,7 @@ from pytest import raises as assert_raises, fixture
 from re import escape
 
 from runtime.threading import InterruptSignal, Interrupt, InterruptException
-from runtime.threading.tasks import Task, AggregateException, TaskCanceledError, TaskException
+from runtime.threading.tasks import Task, AggregateException, TaskException
 from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, PFork
 from runtime.threading.parallel import ProducerConsumerQueue
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler, TaskScheduler
@@ -69,7 +69,7 @@ def test_error_handling(internals):
             with assert_raises(AggregateException):
                 pl([1,2,3,"a",4,5]).drain() # pyright: ignore[reportArgumentType]
 
-    assert scheduler.threads == scheduler.suspended_threads == 0
+    assert scheduler.allocated_threads == scheduler.suspended_threads == 0
 
 
 

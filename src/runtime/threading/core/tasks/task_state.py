@@ -5,5 +5,5 @@ class TaskState(IntEnum):
     SCHEDULED = 1
     RUNNING = 2
     COMPLETED = 3
-    CANCELED = 4
+    INTERRUPTED = 4
     FAILED = 5

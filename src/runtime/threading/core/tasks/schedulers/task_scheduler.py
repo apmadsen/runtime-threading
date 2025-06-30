@@ -43,22 +43,26 @@ class TaskScheduler(ABC):
     @property
     @abstractmethod
     def is_closed(self) -> bool:
+        """Indicates if the scheduler has been closed.
+        """
         ...
 
     @property
     def finalized(self) -> bool: # pragma: no cover
-        """Indicates if object has been finalized or not."""
+        """Indicates if object has been finalized or not.
+        """
         return not self.__finalizer.alive
 
     @property
     def finalizing(self) -> bool: # pragma: no cover
-        """Indicates if object is in the process of finalizing or not."""
+        """Indicates if object is in the process of finalizing or not.
+        """
         return self.__finalizing
 
 
     @staticmethod
     def default() -> TaskScheduler:
-        """Returns the default task scheduler
+        """Returns the default task scheduler (a ConcurrentTaskScheduler instance).
         """
         with LOCK:
             if TaskScheduler.__default__ is None or TaskScheduler.__default__.is_closed or TaskScheduler.__default__.finalizing:
@@ -69,10 +73,7 @@ class TaskScheduler(ABC):
     @staticmethod
     def current() -> TaskScheduler:
         """Returns the task scheduler of the currently running task, or the default task scheduler
-        if not called from within a running task
-
-        Returns:
-            TaskScheduler: The task scheduler of the currently running task, or the default task scheduler
+        if not called from within a running task.
         """
         cur_thread = current_thread()
         with LOCK:
@@ -83,10 +84,7 @@ class TaskScheduler(ABC):
 
     @staticmethod
     def current_task() -> Task[Any] | None:
-        """Returns the currently running task, if any
-
-        Returns:
-            Task | None: The currently running task
+        """Returns the currently running task, if called from within one.
         """
         cur_thread = current_thread()
         with LOCK:
@@ -158,7 +156,7 @@ class TaskScheduler(ABC):
 
     @abstractmethod
     def queue(self, task: Task[Any]) -> None:
-        """Queues the task.
+        """Queues the specified task.
 
         Arguments:
             task (Task): The task to schedule
@@ -167,7 +165,7 @@ class TaskScheduler(ABC):
 
     @abstractmethod
     def prioritise(self, task: Task[Any]) -> None:
-        """Runs the task inline of another.
+        """Runs the task inline of another. For internal use.
 
         Arguments:
             task (Task): The task to run

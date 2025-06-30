@@ -56,3 +56,4 @@ def acquire_or_fail(
         return Ctx(lock)
     else:
         raise fail()
+

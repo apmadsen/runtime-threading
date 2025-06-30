@@ -82,7 +82,7 @@ def test_process_error(internals):
         getattr(output, "__next__")()
 
 
-def test_process_cancel(internals):
+def test_process_interrupt(internals):
     items = [ randint(0, 100000) for _ in range(1000) ]
     cs = InterruptSignal()
 

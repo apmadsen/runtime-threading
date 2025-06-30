@@ -32,9 +32,6 @@ def fn_wait_for_signal(task: Task[Any], interrupt: Interrupt, started_event: Eve
     Event.wait_any((task.interrupt.wait_event, interrupt.wait_event))
     task.interrupt.raise_if_signaled()
 
-def fn_cancel_self(task: Task[str]):
-    task.cancel()
-
 def fn_raise_interrupt(task: Task[str], signal: InterruptSignal):
     signal.signal()
     task.interrupt.raise_if_signaled()
@@ -67,7 +64,7 @@ def fn_get_first_result_from_tasks(task: Task[str | None], tasks: Sequence[Task[
 def fn_get_count_of_tasks(task: Task[int], tasks: Sequence[Task[Any]]) -> int:
     return len(tasks)
 
-def fn_sleep_if_not_canceled(task: Task[Any], t_sleep: float) -> None:
+def fn_sleep_if_not_interrupted(task: Task[Any], t_sleep: float) -> None:
     task.interrupt.raise_if_signaled()
     task.interrupt.wait_event.wait(t_sleep)
 

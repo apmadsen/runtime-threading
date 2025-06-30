@@ -34,7 +34,7 @@ class LockBase:
         """Acquires the lock.
 
         Args:
-            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            timeout (float | None, optional): Timeout (seconds) before returning False. Defaults to None.
             interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Raises:

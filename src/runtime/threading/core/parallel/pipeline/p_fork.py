@@ -58,16 +58,16 @@ class PFork(PFn[Tin, Tout]):
                     queue.put(item)
 
 
-        def complete_queues(task: Task[Any], tasks: Iterable[Task[Any]]):
+        def succeeded(task: Task[Any], tasks: Iterable[Task[Any]]):
             for _, queue in self.__queues:
                 queue.complete()
 
-        def cancel_queues(task: Task[Any], tasks: Iterable[Task[Any]]): # pragma: no cover
+        def interrupted(task: Task[Any], tasks: Iterable[Task[Any]]): # pragma: no cover
             signal.signal()
             for _, queue in self.__queues:
                 queue.fail(InterruptException(task.interrupt))
 
-        def fail_queues(task: Task[Any], tasks: Iterable[Task[Any]]):
+        def failed(task: Task[Any], tasks: Iterable[Task[Any]]):
             signal.signal()
             exception = AggregateException(tuple(cast(Exception, task.exception) for task in tasks if task.is_failed ))
 
@@ -91,10 +91,10 @@ class PFork(PFn[Tin, Tout]):
             ) for _ in range(parallelism)
         ]
 
-        t_complete = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY).run(complete_queues)
-        t_fail = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(fail_queues)
-        t_cancel = Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).run(cancel_queues)
+        t_succeeded = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY).run(succeeded)
+        t_failed = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(failed)
+        t_interrupted = Task.with_any(tasks, options=ContinuationOptions.ON_INTERRUPTED | ContinuationOptions.INLINE).run(interrupted)
 
-        Task.with_all([ *self.__tasks, *tasks, t_cancel, t_fail, t_complete ], options=ContinuationOptions.DEFAULT).run(complete_queue)
+        Task.with_all([ *self.__tasks, *tasks, t_interrupted, t_failed, t_succeeded ], options=ContinuationOptions.DEFAULT).run(complete_queue)
 
         return self.__queue_out.get_iterator()

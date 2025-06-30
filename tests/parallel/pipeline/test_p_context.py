@@ -5,7 +5,7 @@ from pytest import raises as assert_raises, fixture
 from re import escape
 
 from runtime.threading import InterruptSignal, Interrupt, InterruptException
-from runtime.threading.tasks import Task, AggregateException, TaskCanceledError, TaskException
+from runtime.threading.tasks import Task, AggregateException, TaskException
 from runtime.threading.parallel.pipeline import PFn, PFilter, NullPFn, PContext, PFork
 from runtime.threading.parallel import ProducerConsumerQueue
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler, TaskScheduler

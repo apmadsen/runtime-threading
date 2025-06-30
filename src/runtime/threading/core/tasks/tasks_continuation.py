@@ -28,8 +28,8 @@ class TasksContinuation(Continuation):
         self.__states: set[TaskState] = set()
         self.__done = False
 
-        if (options & ContinuationOptions.ON_CANCELED) == ContinuationOptions.ON_CANCELED:
-            self.__states |= set([TaskState.CANCELED])
+        if (options & ContinuationOptions.ON_INTERRUPTED) == ContinuationOptions.ON_INTERRUPTED:
+            self.__states |= set([TaskState.INTERRUPTED])
         if (options & ContinuationOptions.ON_FAILED) == ContinuationOptions.ON_FAILED:
             self.__states |= set([TaskState.FAILED])
         if (options & ContinuationOptions.ON_COMPLETED_SUCCESSFULLY) == ContinuationOptions.ON_COMPLETED_SUCCESSFULLY:
@@ -54,7 +54,7 @@ class TasksContinuation(Continuation):
                         if states.issubset(self.__states):
                             pass
                         elif not any(missing): # on or more tasks are in a wrong state
-                            self.__then._cancel_and_notify() # pyright: ignore[reportPrivateUsage]
+                            self.__then._interrupt_and_notify() # pyright: ignore[reportPrivateUsage]
                             result = True
                         else:
                             pass
@@ -63,10 +63,10 @@ class TasksContinuation(Continuation):
                             pass
                         elif (self.__options & ContinuationOptions.ON_FAILED == ContinuationOptions.ON_FAILED) and TaskState.FAILED in states:
                             pass
-                        elif (self.__options & ContinuationOptions.ON_CANCELED == ContinuationOptions.ON_CANCELED) and TaskState.CANCELED in states:
+                        elif (self.__options & ContinuationOptions.ON_INTERRUPTED == ContinuationOptions.ON_INTERRUPTED) and TaskState.INTERRUPTED in states:
                             pass
                         elif not any(missing):
-                            self.__then._cancel_and_notify() # pyright: ignore[reportPrivateUsage]
+                            self.__then._interrupt_and_notify() # pyright: ignore[reportPrivateUsage]
                             result = True
                         else:
                             result = False
@@ -89,7 +89,7 @@ class TasksContinuation(Continuation):
                     return result
 
             except InterruptException:
-                self.__then._cancel_and_notify() # pyright: ignore[reportPrivateUsage]
+                self.__then._interrupt_and_notify() # pyright: ignore[reportPrivateUsage]
                 self.__done = True
                 self.__what = ()
                 del self.__then

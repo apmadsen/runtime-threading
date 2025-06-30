@@ -4,7 +4,8 @@ from runtime.threading.core.threading_exception import ThreadingException
 
 class AggregateException(ThreadingException):
     """The AggregateException exception is raised from operations awaiting results of several tasks.
-    It may contain one or several exceptions raised from one or several tasks."""
+    It may contain one or several exceptions raised from one or several tasks.
+    """
 
     __slots__ = ["__exceptions"]
 

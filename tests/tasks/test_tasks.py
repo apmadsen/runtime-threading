@@ -7,7 +7,7 @@ from re import escape
 from runtime.threading.tasks import (
     Task, ContinuationOptions, schedulers, AggregateException, TaskState, TaskException,
     TaskCompletedError, TaskNotScheduledError, TaskAlreadyRunningError, TaskAlreadyScheduledError,
-    TaskCanceledError, AwaitedTaskCanceledError
+    AwaitedTaskInterruptedError
 )
 from runtime.threading.tasks.schedulers import TaskScheduler, ConcurrentTaskScheduler
 from runtime.threading import InterruptSignal, Interrupt, InterruptException, Event, sleep
@@ -15,7 +15,7 @@ from runtime.threading import InterruptSignal, Interrupt, InterruptException, Ev
 from tests.shared_functions import (
     fn_return_parent_task, fn_return_task, fn_wait_for_signal, fn_schedule_task_after_time,
     fn_wait_for_task_after_time, fn_raise_unrelated_signal, fn_fail_immediately, fn_raise_interrupt,
-    fn_cancel_self, fn_get_first_result_from_tasks, fn_get_count_of_tasks, fn_sleep_if_not_canceled,
+    fn_get_first_result_from_tasks, fn_get_count_of_tasks, fn_sleep_if_not_interrupted,
     fn_fail_after_time, fn_return_value_after_time, fn_raise_interrupt_after_time,
     fn_continue_and_return_result_or_state, fn_continue_and_return_result_or_state_with_mods
 )
@@ -25,12 +25,12 @@ T = TypeVar('T')
 
 
 def test_basic(internals):
-    t1 = Task.plan(fn_sleep_if_not_canceled, 0.5)
+    t1 = Task.plan(fn_sleep_if_not_interrupted, 0.5)
 
     with assert_raises(TaskException, match=escape(str(TaskNotScheduledError))):
         t1.result
 
-    t2 = Task.run(fn_sleep_if_not_canceled, 0.5)
+    t2 = Task.run(fn_sleep_if_not_interrupted, 0.5)
     assert t1.id != t2.id
     t1.schedule()
 
@@ -55,8 +55,8 @@ def test_basic(internals):
     # Task.wait_all((t1, t2, t3))
 
 # def test_x(internals):
-#     # t1 = Task.plan(fn_sleep_if_not_canceled, 0.5)
-#     t2 = Task.run(fn_sleep_if_not_canceled, 0.5)
+#     # t1 = Task.plan(fn_sleep_if_not_interrupted, 0.5)
+#     t2 = Task.run(fn_sleep_if_not_interrupted, 0.5)
 #     # t1.schedule()
 
 #     # Task.wait_all([t1, t2])
@@ -66,6 +66,7 @@ def test_basic(internals):
 def test_run_synchronously(internals):
     signal1 = Event()
     signal2 = InterruptSignal()
+    signal3 = InterruptSignal()
     t1 = Task.run(fn_wait_for_signal, signal2.interrupt, signal1)
     signal1.wait() # needed to avoid deadlock
 
@@ -81,20 +82,13 @@ def test_run_synchronously(internals):
         t1.run_synchronously()
 
 
-    t2 = Task.plan(fn_sleep_if_not_canceled, 0.025)
-    t2.cancel()
-
-    with assert_raises(TaskException, match=escape(str(TaskCanceledError))):
-        t2.run_synchronously()
-
-
 def test_suspend(internals):
     with schedulers.ConcurrentTaskScheduler(1) as scheduler:
         # t2 should suspend while waiting for t1 to complete,
         # which should allow t3 to run and start t1, which in turn
         # lets t2 complete
 
-        t1 = Task.plan(fn_sleep_if_not_canceled, 0.025)
+        t1 = Task.plan(fn_sleep_if_not_interrupted, 0.025)
         t2 = Task.create(scheduler=scheduler).run(fn_wait_for_task_after_time, t1, 0.01)
         t3 = Task.create(scheduler=scheduler).run(fn_schedule_task_after_time, t1, scheduler, 0.1)
 
@@ -114,7 +108,7 @@ def test_generic(internals):
 
 def test_exceptions(internals):
     t1 = Task.run(fn_fail_after_time, 0.05, "Task fail")
-    t2 = Task.run(fn_sleep_if_not_canceled, 0.1)
+    t2 = Task.run(fn_sleep_if_not_interrupted, 0.1)
     t3 = Task.run(fn_fail_immediately, "Task fail")
 
     with assert_raises(Exception, match="Task fail"):
@@ -126,11 +120,11 @@ def test_exceptions(internals):
     with assert_raises(AggregateException):
         Task.wait_all([t1, t2])
 
-def test_cancellation(internals):
+def test_interruption(internals):
     cs1 = InterruptSignal()
     cs2 = InterruptSignal()
     t1 = Task.create(interrupt=cs1.interrupt).plan(fn_raise_interrupt_after_time, 0.01)
-    t2 = Task.create(interrupt=cs2.interrupt).plan(fn_sleep_if_not_canceled, 0.01)
+    t2 = Task.create(interrupt=cs2.interrupt).plan(fn_sleep_if_not_interrupted, 0.01)
     t1.schedule()
     cs1.signal()
     t2.schedule()
@@ -141,10 +135,10 @@ def test_cancellation(internals):
         t1.result
 
     t1.wait()
-    assert t1.is_canceled
+    assert t1.is_interrupted
 
     t2.wait()
-    assert not t2.is_canceled
+    assert not t2.is_interrupted
     try:
         Task.wait_all([t1, t2])
     except AggregateException as ex:
@@ -156,11 +150,11 @@ def test_cancellation(internals):
 
     signal1 = Event()
     signal3 = InterruptSignal()
-    t3 = Task.run(fn_wait_for_signal, signal3.interrupt, signal1)
+    t3 = Task.create(interrupt=signal3.interrupt).run(fn_wait_for_signal, signal3.interrupt, signal1)
     signal1.wait()
-    t3.cancel()
+    signal3.signal()
     t3.wait()
-    assert t3.is_canceled
+    assert t3.is_interrupted
 
 
 def test_continuations(internals):
@@ -172,7 +166,7 @@ def test_continuations(internals):
         test_str = "test"
         t1 = Task.plan(fn_return_value_after_time, 0.005, test_str)
         t2 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state)
-        t3 = t2.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_CANCELED, fn_continue_and_return_result_or_state)
+        t3 = t2.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_INTERRUPTED, fn_continue_and_return_result_or_state)
         _ = t3.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue_and_return_result_or_state)
         t4 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state_with_mods, 45, y=2)
         t1.schedule(scheduler)
@@ -180,7 +174,7 @@ def test_continuations(internals):
         cs5 = InterruptSignal()
         t5 = Task.create(interrupt=cs5.interrupt).plan(fn_return_value_after_time, 0.05, test_str)
         t6 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY, fn_continue_and_return_result_or_state)
-        t7 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_CANCELED, fn_continue_and_return_result_or_state)
+        t7 = t5.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.ON_INTERRUPTED, fn_continue_and_return_result_or_state)
         t5.schedule(scheduler)
         sleep(0.001)
         cs5.signal()
@@ -189,7 +183,7 @@ def test_continuations(internals):
 
         assert t4.result.endswith(" "+str(45*2))
         with assert_raises(InterruptException):
-            t6.result # t6 is implicitly canceled and will throw an exception
+            t6.result # t6 is implicitly interrupted and will throw an exception
 
         t8 = Task.plan(fn_return_value_after_time, 0.01, "Task 8 done")
         t9 = Task[str].plan(fn_return_value_after_time, 0.001, "Task 9 done")
@@ -230,19 +224,19 @@ def test_continuations(internals):
 
         signal = InterruptSignal()
 
-        with assert_raises(TaskException, match=escape(str(AwaitedTaskCanceledError))):
+        with assert_raises(TaskException, match=escape(str(AwaitedTaskInterruptedError))):
             Task.wait_all([
                 Task.create(scheduler=scheduler, interrupt=signal.interrupt).run(fn_return_value_after_time, 0.01, "Task 121 done"),
                 Task.create(scheduler=scheduler, interrupt=signal.interrupt).run(fn_raise_interrupt, signal),
-            ], fail_on_cancel=True)
+            ], fail_on_interrupt=True)
 
         signal = InterruptSignal()
 
-        with assert_raises(TaskException, match=escape(str(AwaitedTaskCanceledError))):
+        with assert_raises(TaskException, match=escape(str(AwaitedTaskInterruptedError))):
             Task.wait_any([
                 Task.create(scheduler=scheduler, interrupt=signal.interrupt).run(fn_return_value_after_time, 0.01, "Task 121 done"),
                 Task.create(scheduler=scheduler, interrupt=signal.interrupt).run(fn_raise_interrupt, signal),
-            ], fail_on_cancel=True)
+            ], fail_on_interrupt=True)
 
         signal = InterruptSignal()
 

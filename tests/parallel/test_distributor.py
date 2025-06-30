@@ -35,7 +35,7 @@ def test_basics(internals):
     for output in outputs:
         assert facit == sorted(output)
 
-def test_cancellation(internals):
+def test_interruption(internals):
     signal = InterruptSignal()
     queue = ProducerConsumerQueue[str]()
     dist = distribute(queue.get_iterator())

@@ -86,7 +86,7 @@ def test_lock_async(internals):
 #     assert l1.acquire(TASK_SUSPEND_AFTER*2)
 
 
-def test_lock_async_cancellation(internals):
+def test_lock_async_interruption(internals):
     cs = InterruptSignal()
     l1 = Lock()
     locked_event = Event()
@@ -118,7 +118,7 @@ def test_acquire_or_fail(internals):
     with assert_raises(Exception, match="Fail"):
         acquire_or_fail(l1, 0, lambda: Exception("Fail"))
 
-    sleep(TASK_SUSPEND_AFTER+0.05)
+    sleep(TASK_SUSPEND_AFTER+0.1)
     assert not int_lock.locked()
     assert acquire_or_fail(l1, 0, lambda: Exception("Fail"))
 

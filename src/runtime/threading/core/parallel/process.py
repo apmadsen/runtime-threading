@@ -100,14 +100,14 @@ class ProcessProto(Generic[Tin]):
             for _ in range(parallelism)
         ]
 
-        def success(task: Task[Any], tasks: Sequence[Task[Any]]):
+        def succeeded(task: Task[Any], tasks: Sequence[Task[Any]]):
             if not output_queue:
                 queue_out.complete()
 
-        def cancel(task: Task[Any], tasks: Sequence[Task[Any]]):
+        def interrupted(task: Task[Any], tasks: Sequence[Task[Any]]):
             exceptions: dict[int, Exception] = {}
-            for canceled_task in [ task for task in tasks if task.is_canceled ]:
-                exception = canceled_task.exception
+            for interrupted_task in [ task for task in tasks if task.is_interrupted ]:
+                exception = interrupted_task.exception
                 if isinstance(exception, InterruptException):
                     exceptions[exception.interrupt.signal_id or 0] = exception
                 else:
@@ -118,20 +118,20 @@ class ProcessProto(Generic[Tin]):
             else:
                 queue_out.fail(AggregateException(tuple(exceptions.values()))) # pragma: no cover -- should never happen sinde underlying tasks will always have the same interrupt
 
-        def fail(task: Task[Any], tasks: Sequence[Task[Any]]):
+        def failed(task: Task[Any], tasks: Sequence[Task[Any]]):
             exception = AggregateException(tuple(cast(Exception, task.exception) for task in tasks if task.is_failed ))
             queue_out.fail(exception)
             signal.signal()
 
 
-        task_success = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).run(success)
-        task_canceled = Task.with_any(tasks, options=ContinuationOptions.ON_CANCELED | ContinuationOptions.INLINE).run(cancel)
-        task_failed = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(fail)
+        task_success = Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).run(succeeded)
+        task_interrupted = Task.with_any(tasks, options=ContinuationOptions.ON_INTERRUPTED | ContinuationOptions.INLINE).run(interrupted)
+        task_failed = Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(failed)
 
         if not output_queue:
             return queue_out.get_iterator()
         else:
-            return Task.with_any([task_success, task_canceled, task_failed]).plan()
+            return Task.with_any([task_success, task_interrupted, task_failed]).plan()
 
 def process(
     items: Iterable[Tin], /,

@@ -4,5 +4,9 @@
    [threading](/docs/0.0/runtime/threading/module.md) >
     concurrent
 
-# concurrent module
+# runtime.threading.concurrent module
+
+## Classes
+
+### [Queue](queue.md)
 

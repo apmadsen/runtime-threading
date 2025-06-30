@@ -23,10 +23,15 @@ Purpose = Literal[ "USER", "TERMINATE", "CONTINUATION", "INTERRUPT_NOTIFY",
                    "CONCURRENT_TASK_SCHEDULER_CLOSE", "TASK_NOTIFY",
                    "CONCURRENT_QUEUE_NOTIFY", "PRODUCER_CONSUMER_QUEUE_NOTIFY" ]
 class Event:
-    """The Event class is used for synchronization between thrads.
+    """The Event class is used for synchronization between threads.
     """
     __slots__ = [ "__id", "__lock", "__purpose", "__internal_event", "__continuations", "__weakref__" ]
 
+    @overload
+    def __init__(self) -> None:
+        """Creates a new Event.
+        """
+        ...
     @overload
     def __init__(self, *, purpose: Purpose = "USER") -> None:
         """Creates a new Event.
@@ -36,11 +41,19 @@ class Event:
         """
         ...
     @overload
-    def __init__(self, internal_event: TEvent, *, purpose: Purpose = "USER") -> None:
-        """Creates an event from an existing internal event.
+    def __init__(self, internal_event: TEvent) -> None:
+        """Creates an event from an existing builtin event.
 
         Args:
-            internal_event (TEvent): The preexisting internal builtin event instance.
+            internal_event (TEvent): The preexisting builtin event instance.
+        """
+        ...
+    @overload
+    def __init__(self, internal_event: TEvent, *, purpose: Purpose = "USER") -> None:
+        """Creates an event from an existing builtin event.
+
+        Args:
+            internal_event (TEvent): The preexisting builtin event instance.
             purpose (Purpose, optional): The event purpose (used for testing). Defaults to "USER".
         """
         ...
@@ -52,13 +65,14 @@ class Event:
 
     @property
     def is_signaled(self) -> bool:
-        """Indicates if the event is signaled or not
+        """Indicates if the event is signaled or not.
         """
         return self.__internal_event.is_set()
 
     @property
     def purpose(self) -> Purpose: # pragma: no cover
-        """Returns the event purpose (for testing)"""
+        """Returns the event purpose (for testing).
+        """
         return cast(Purpose, self.__purpose)
 
     @property
@@ -88,7 +102,7 @@ class Event:
         """Waits for the event to be signaled.
 
         Args:
-            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            timeout (float | None, optional): Timeout (seconds) before returning False. Defaults to None.
             interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
@@ -118,7 +132,7 @@ class Event:
 
         Args:
             events (Sequence[Event]): The awaited events.
-            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            timeout (float | None, optional): Timeout (seconds) before returning False. Defaults to None.
             interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
@@ -156,7 +170,7 @@ class Event:
 
         Args:
             events (Sequence[Event]): The awaited events
-            timeout (float | None, optional): Timeut (seconds) before returning False. Defaults to None.
+            timeout (float | None, optional): Timeout (seconds) before returning False. Defaults to None.
             interrupt (Interrupt | None, optional): An Interrupt for this specific call. Defaults to None.
 
         Returns:
@@ -297,5 +311,4 @@ if current_thread() is main_thread():
     signal(SIGINT, __handler)
 else:
     raise ThreadingException("Module runtime.threading.tasks must be imported (initially) in the main thread")
-
 

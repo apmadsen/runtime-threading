@@ -8,15 +8,17 @@ if TYPE_CHECKING:
 
 class InterruptException(ThreadingException):
     """The InterruptException exception is raised whenever raise_if_signaled()
-    is called on a signaled Interrupt"""
+    is called on a signaled Interrupt.
+    """
+
     __slots__ = ["__interrupt"]
 
     def __init__(self, interrupt: Interrupt):
-        super().__init__("Task or process was canceled")
+        super().__init__("Task or process was interrupted")
         self.__interrupt = interrupt
 
     @property
     def interrupt(self) -> Interrupt:
-        """The Interrupt associated with the exception
+        """The Interrupt associated with the exception.
         """
         return self.__interrupt
