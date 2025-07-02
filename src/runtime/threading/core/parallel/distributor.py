@@ -27,11 +27,14 @@ class Distributor(Generic[T]):
         self.__sealed = False
 
 
-    def start(self, interrupt: Interrupt | None = None) -> None:
+    def start(self, interrupt: Interrupt | None = None) -> Task[None]:
         """Seals distributor and begins distributing.
 
         Args:
             interrupt (Interrupt, optional): The Interrupt. Defaults to None.
+
+        Returns:
+            Task[None]: Returns an awaitable task.
         """
         if self.__sealed:
             raise DistributionAlreadyStartedError
@@ -73,6 +76,7 @@ class Distributor(Generic[T]):
         Task.with_all(tasks, options=ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE).run(succeeded)
         Task.with_any(tasks, options=ContinuationOptions.ON_FAILED | ContinuationOptions.INLINE).run(failed)
         Task.with_any(tasks, options=ContinuationOptions.ON_INTERRUPTED | ContinuationOptions.INLINE).run(interrupted)
+        return Task.with_any(tasks).plan()
 
     def take(self) -> PIterable[T]:
         """Adds a consumer to the distributor instance. Note that any work already done by other consumers,

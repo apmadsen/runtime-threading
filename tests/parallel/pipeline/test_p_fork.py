@@ -39,6 +39,6 @@ def test_interruption(internals):
                 result = list(f1(items))
 
 
-def fn(task: Task[int], item: int) -> Iterable[int]:
+def fn(task: Task[Iterable[int]], item: int) -> Iterable[int]:
     task.interrupt.raise_if_signaled()
     yield item * 2

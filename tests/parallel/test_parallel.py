@@ -41,7 +41,7 @@ def test_background(internals):
 
 
 def test_process(internals):
-    def fn_process(task: Task[float], item: int) -> Iterable[float]:
+    def fn_process(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         return [2 * item]
 
     # test with a normal list iterable
@@ -73,7 +73,7 @@ def test_process(internals):
 def test_process_error(internals):
     items = [ randint(0, 100000) for _ in range(1000) ]
 
-    def fn_process(task: Task[float], item: int) -> Iterable[float]:
+    def fn_process(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         raise Exception()
 
     output = parallel.process(items, parallelism = 5).do(fn_process)
@@ -86,7 +86,7 @@ def test_process_interrupt(internals):
     items = [ randint(0, 100000) for _ in range(1000) ]
     cs = InterruptSignal()
 
-    def fn_process(task: Task[float], item: int) -> Iterable[float]:
+    def fn_process(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         assert cs.interrupt.propagates_to(task.interrupt)
         task.interrupt.raise_if_signaled()
         cs.signal()
@@ -136,7 +136,7 @@ def test_for_each(internals):
         assert len(items) == count
 
 def test_map(internals):
-    def fn(task: Task[int], s: int) -> Iterable[int]:
+    def fn(task: Task[Iterable[int]], s: int) -> Iterable[int]:
         yield s*2
 
     items = [ randint(0,100000) for _ in range(100)]

@@ -8,13 +8,32 @@
 
 The `InterruptSignal` class is used to interrupt tasks asynchronously by signaling an underlying `Interrupt` instance.
 
+### Example
+
+```python
+from runtime.threading import InterruptSignal, signal_after
+from runtime.threading.tasks import Task
+
+def fn(task: Task[None]):
+    while True:
+        task.interrupt.raise_if_signaled()
+        ...
+
+signal = InterruptSignal()
+task = Task.create(interrupt = signal.interrupt).run(fn)
+signal_after(signal, 0.1)
+task.wait()
+
+assert task.is_interrupted
+```
+
 ## Constructors
 
-### __init__()
+### \_\_init\_\_()
 
 Creates a new `InterruptSignal`.
 
-### __init__(*linked_interrupts: _Interrupt_)
+### \_\_init\_\_(*linked_interrupts: _Interrupt_)
 
 Creates a new `InterruptSignal` linked to one or more other interrupts.
 

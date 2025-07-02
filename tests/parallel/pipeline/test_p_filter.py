@@ -20,7 +20,7 @@ def test_pfilter(internals):
 
     def filter(item: int) -> bool:
         return item % 2 == 0
-    def fn(task: Task[int], item: int) -> Iterable[int]:
+    def fn(task: Task[Iterable[int]], item: int) -> Iterable[int]:
         yield item * 2
 
     # implicit function to filter

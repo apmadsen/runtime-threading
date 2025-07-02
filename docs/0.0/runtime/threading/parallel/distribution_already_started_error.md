@@ -5,4 +5,6 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      DistributionAlreadyStartedError
 
-# DistributionAlreadyStartedError
+# DistributionAlreadyStartedError : Exception
+
+The `DistributionAlreadyStartedError` exception is raised when a `Distributor` instance is requested to start more than once or when `take()` is called after being started.

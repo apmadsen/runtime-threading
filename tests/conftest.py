@@ -126,9 +126,9 @@ def filter_continuations(continuations: dict[Event, set[Continuation]]) -> dict[
         remaining: set[Continuation] = set()
         for continuation in continuations1:
             filter = False
-            # if referrer := get_referrer(continuation):
-            #     if referrer[0].startswith("concurrent_task_scheduler.py") and referrer[0].endswith("(__run)"):
-            #         filter = True
+            if referrer := get_referrer(continuation):
+                if referrer[0].startswith("concurrent_task_scheduler.py") and referrer[0].endswith("(__run)"):
+                    filter = True
 
             if not filter:
                 remaining.add(continuation)

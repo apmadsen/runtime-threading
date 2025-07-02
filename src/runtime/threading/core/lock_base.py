@@ -15,7 +15,7 @@ DEBUGGING = False
 class LockBase:
     """The LockBase is the base class for locks and semaphores which share much of the the same logic.
     """
-    __slots__ = ["__internal_lock"]
+    __slots__ = [ "__internal_lock" ]
 
     def __init__(self, lock: RLock | TLock | Semaphore):
         self.__internal_lock = lock
@@ -84,6 +84,9 @@ class LockBase:
         """Releases the lock.
         """
         self.__internal_lock.release()
+
+
+
 
 
     def __enter__(self) -> None:

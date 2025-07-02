@@ -3,6 +3,7 @@ from collections.abc import Sized
 
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.tasks.task import Task
+from runtime.threading.core.tasks.config import DEFAULT_PARALLELISM
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
 from runtime.threading.core.tasks.helpers import get_function_name
@@ -45,7 +46,7 @@ class ForEachProto(Generic[T]):
             Task[None]. Returns a task.
         """
 
-        parallelism = max(1, self.__parallelism or 2)
+        parallelism = max(1, self.__parallelism or DEFAULT_PARALLELISM)
 
         if isinstance(self.__items, Sized):
             count = len(self.__items)

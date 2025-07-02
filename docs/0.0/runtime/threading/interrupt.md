@@ -8,6 +8,25 @@
 
 The `Interrupt` class is used for asynchronous task interruption. The Interrupt instance can be passed around between tasks and used to poll for interruption, while the `InterruptSignal` is used for signaling the `Interrupt`.
 
+### Example
+
+```python
+from runtime.threading import InterruptSignal, signal_after
+from runtime.threading.tasks import Task
+
+def fn(task: Task[None]):
+    while True:
+        task.interrupt.raise_if_signaled()
+        ...
+
+signal = InterruptSignal()
+task = Task.create(interrupt = signal.interrupt).run(fn)
+signal_after(signal, 0.1)
+task.wait()
+
+assert task.is_interrupted
+```
+
 ## Properties
 
 ### is_signaled -> _bool_

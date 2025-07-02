@@ -47,7 +47,7 @@ class PFilter(PFn[T, T]):
         ...
     def __init__(self, fn: Callable[[T], bool] | None = None, *, parallelism: int | float = 2):
         self.__catch_all = not fn
-        def filter_fn(task: Task[T], item: T) -> Iterable[T]:
+        def filter_fn(task: Task[Iterable[T]], item: T) -> Iterable[T]:
             if not fn:
                 yield item # filter is a catch-all filter, i.e. it doesn't filter out anything
             else:

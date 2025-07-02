@@ -122,7 +122,7 @@ class TaskProto:
         """Creates a new task which will be scheduled after specified time.
 
         Args:
-            time (float): The time to wait before scheduling the task.
+            time (float): The time (seconds) to wait before scheduling the task.
             fn (Callable[Concatenate[Task[T], P], T]): The target function.
 
         Returns:

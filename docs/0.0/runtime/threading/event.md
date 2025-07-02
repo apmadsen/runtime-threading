@@ -8,13 +8,35 @@
 
 The `Event` class is used for synchronization between threads.
 
+### Example
+
+```python
+from runtime.threading import Event
+from runtime.threading.tasks import Task
+
+event = Event()
+
+def fn(task: Task[str], signal: Event) -> str:
+    signal.wait()
+    return "abc"
+
+task = Task.run(fn, event)
+
+assert not task.is_completed
+
+event.signal()
+
+assert task.result == "abc"
+assert task.is_completed
+```
+
 ## Constructors
 
-### __init__()
+### \_\_init\_\_()
 
 Creates an event.
 
-### __init__(internal_event: _threading.Event_)
+### \_\_init\_\_(internal_event: _threading.Event_)
 
 Creates an event from an existing builtin event.
 

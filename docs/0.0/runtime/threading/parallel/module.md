@@ -12,9 +12,12 @@
 
 ## Classes
 
+### [BackgroundProto](background_proto.md)
 ### [DistributionAlreadyStartedError](distribution_already_started_error.md)
+### [ForEachProto](for_each_proto.md)
 ### [ParallelException](parallel_exception.md)
 ### [Distributor](distributor.md)
+### [ProcessProto](process_proto.md)
 ### [ProducerConsumerQueue](producer_consumer_queue.md)
 ### [ProducerConsumerQueueIterator](producer_consumer_queue_iterator.md)
 

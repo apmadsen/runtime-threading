@@ -21,17 +21,17 @@ def baseline_pfork(parallelism: tuple[int, ...], count: int):
     facit = sorted(facit)
 
 
-    def fn0(task: Task[int], item: int) -> Iterable[int]:
+    def fn0(task: Task[Iterable[int]], item: int) -> Iterable[int]:
         yield item + 1
-    def fn1(task: Task[float], item: int) -> Iterable[float]:
+    def fn1(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         yield item + 1000
-    def fn1_1(task: Task[float], item: float) -> Iterable[float]:
+    def fn1_1(task: Task[Iterable[float]], item: float) -> Iterable[float]:
         yield item + 500
-    def fn2(task: Task[float], item: int) -> Iterable[float]:
+    def fn2(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         yield item + 2000
-    def fn3(task: Task[float], item: int) -> Iterable[float]:
+    def fn3(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         yield item + 3000
-    def fn4(task: Task[float], item: float) -> Iterable[float]:
+    def fn4(task: Task[Iterable[float]], item: float) -> Iterable[float]:
         yield item + 10000
 
 

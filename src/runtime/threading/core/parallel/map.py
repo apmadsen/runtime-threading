@@ -2,6 +2,7 @@ from typing import Iterable, Callable, TypeVar, Generic, ParamSpec, Concatenate
 
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.tasks.task import Task
+from runtime.threading.core.tasks.config import DEFAULT_PARALLELISM
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.parallel.process import process
 from runtime.threading.core.tasks.helpers import get_function_name
@@ -32,7 +33,7 @@ class MapProto(Generic[Tin]):
 
     def do(
         self,
-        fn: Callable[Concatenate[Task[Tin], Tin, P], Iterable[Tout]], /,
+        fn: Callable[Concatenate[Task[Iterable[Tout]], Tin, P], Iterable[Tout]], /,
         *args: P.args,
         **kwargs: P.kwargs
     ) -> PIterable[Tout]:
@@ -45,7 +46,7 @@ class MapProto(Generic[Tin]):
             PIterable[Tout]: Returns an iterator.
         """
 
-        parallelism = max(1, self.__parallelism or 2)
+        parallelism = max(1, self.__parallelism or DEFAULT_PARALLELISM)
 
         output = process(
             self.__items,

@@ -16,7 +16,7 @@ from tests.parallel.pipeline.baseline_pfork import baseline_pfork
 
 def test_basics(internals):
     with PContext(4) as ctx:
-        def fn(task: Task[float], item: int) -> Iterable[float]:
+        def fn(task: Task[Iterable[float]], item: int) -> Iterable[float]:
             assert ctx.interrupt.propagates_to(task.interrupt)
             task.interrupt.raise_if_signaled()
             yield item * 1.5
@@ -38,11 +38,11 @@ def test_error_handling(internals):
     with ConcurrentTaskScheduler(8) as scheduler:
         with PContext(4, scheduler=scheduler):
 
-            def fn1(task: Task[float], item: int) -> Iterable[float]:
+            def fn1(task: Task[Iterable[float]], item: int) -> Iterable[float]:
                 task.interrupt.raise_if_signaled()
                 yield item * 1.5
 
-            def fn2(task: Task[float], item: float) -> Iterable[float]:
+            def fn2(task: Task[Iterable[float]], item: float) -> Iterable[float]:
                 task.interrupt.raise_if_signaled()
                 yield item * 2.0
 

@@ -16,11 +16,10 @@ The `signal_after` function creates a task which signals an InterruptSignal inst
 ### Example:
 
 ```python
-from typing import Any
 from runtime.threading import InterruptSignal, signal_after
 from runtime.threading.tasks import Task
 
-def fn(task: Task[Any]):
+def fn(task: Task[None]):
     while True:
         task.interrupt.raise_if_signaled()
         ...

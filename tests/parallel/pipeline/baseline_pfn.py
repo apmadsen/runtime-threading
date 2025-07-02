@@ -12,9 +12,9 @@ from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
 def baseline_pfn(parallelism: tuple[int, ...], count: int):
     c = 1
 
-    def fn1(task: Task[float], item: int) -> Iterable[float]:
+    def fn1(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         yield item * 1.5
-    def fn2(task: Task[float], item: float) -> Iterable[float]:
+    def fn2(task: Task[Iterable[float]], item: float) -> Iterable[float]:
         yield item * 2
 
 

@@ -10,9 +10,26 @@
 
 The `ConcurrentTaskScheduler` class is a task scheduler for concurrent workloads, with a predefined max degree of parallelism.
 
+### Example
+
+```python
+from runtime.threading.tasks import Task
+from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
+
+def fn(task: Task[str]) -> str:
+      return "abc"
+
+with ConcurrentTaskScheduler(8) as scheduler:
+      task = Task.create(scheduler = scheduler).run(fn)
+
+result = task.result # -> "abc"
+
+assert result == "abc"
+```
+
 ## Constructors
 
-### __init__(max_parallelism: _int_ = _DEFAULT_PARALLELISM_, keep_alive: _float_ = _TASK_KEEP_ALIVE_)
+### \_\_init\_\_(max_parallelism: _int_ = _DEFAULT_PARALLELISM_, keep_alive: _float_ = _TASK_KEEP_ALIVE_)
 
 Creates a new ConcurrentTaskScheduler instance.
 

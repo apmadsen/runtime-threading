@@ -12,15 +12,17 @@ The `acquire_or_fail` function tries to acquire a lock for a specific period of 
 
 - lock `Lock | Semaphore`: The lock to attempt acquiring.
 - timeout `float`: The no. of seconds to wait.
-- fail `Callable[[], Exception]`: A function which returns the exception which is to be raised.
+- fail `() -> Exception`: A function which returns the exception which is to be raised.
 - interrupt `Interrupt`: An external interrupt used to cancel operation.
 
 ### Example:
 
 ```python
 from runtime.threading import Lock, acquire_or_fail
+from runtime.threading.tasks import Task
 
 lock = Lock()
-with acquire_or_fail(lock, 0.1, lambda: TimeoutError("Test")):
+
+with acquire_or_fail(lock, 1, lambda: Exception("Failed to acquire lock")):
     ...
 ```

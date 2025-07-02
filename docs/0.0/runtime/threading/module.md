@@ -14,6 +14,7 @@
 ## Classes
 
 ### [AutoClearEvent](auto_clear_event.md)
+### [ContinueWhen](continue_when.md)
 ### [Event](event.md)
 ### [Interrupt](interrupt.md)
 ### [InterruptException](interrupt_exception.md)

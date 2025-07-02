@@ -1,10 +1,11 @@
-from typing import TypeVar, Generic, Iterable, Any, cast
+from typing import TypeVar, Generic, Iterable, Any, cast, overload
+from time import time
 
 from runtime.threading.core.event import Event
 from runtime.threading.core.auto_clear_event import AutoClearEvent
 from runtime.threading.core.concurrent.queue import Queue
 from runtime.threading.core.parallel.parallel_exception import ParallelException
-from runtime.threading.core.parallel.pipeline.p_iterable import PIterable, PIterator
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.interrupt import Interrupt
@@ -18,15 +19,25 @@ class ProducerConsumerQueue(Generic[T]):
     """The ProducerConsumerQueue class is an implemention of the producer/consumer pattern,
     providing a queue on which work can be added and consumed asynchronously on different threads.
 
+    The workflow is as follows: The producer thread is responsible for putting items into the queue, and subsequently calline `complete()` when done, while the consumer merely
+    consumes the items by either calling `try_take()` repeatedly or iterating over the iterator created by calling `get_iterator()`.
     """
-    __slots__ = ["__queue", "__notify_event", "__is_complete", "__is_failed", "__fail", "__is_async"]
+    __slots__ = [ "__queue", "__notify_event", "__is_complete", "__is_failed", "__fail", "__is_async" ]
 
-    def __init__(self, data: Iterable[T] | None = None):
-        """Creates a new ProducerConsumerQueue
+    @overload
+    def __init__(self) -> None:
+        """Creates a new empty ProducerConsumerQueue.
+        """
+        ...
+    @overload
+    def __init__(self, data: Iterable[T]) -> None:
+        """Creates a new ProducerConsumerQueue with existing work.
 
         Args:
-            data (Iterable[T] | None, optional): Any preexisting work to be added to the queue. Defaults to None.
+            data (Iterable[T]): Any preexisting work to be added to the queue.
         """
+        ...
+    def __init__(self, data: Iterable[T] | None = None):
         self.__queue: Queue[T] = Queue()
         self.__notify_event = AutoClearEvent(purpose = "PRODUCER_CONSUMER_QUEUE_NOTIFY")
         self.__is_complete = False
@@ -35,6 +46,7 @@ class ProducerConsumerQueue(Generic[T]):
         self.__fail: Exception | None = None
 
         if data is not None:
+            from runtime.threading.core.parallel.producer_consumer_queue_iterator import ProducerConsumerQueueIterator
             if isinstance(data, ProducerConsumerQueueIterator):
                 self.__is_async = True
 
@@ -62,7 +74,7 @@ class ProducerConsumerQueue(Generic[T]):
 
     @property
     def is_async(self) -> bool:
-        """Indicates if the queue is linked to the output of a ProducerConsumerQueueIterator.
+        """Indicates if the queue is consuming from another `ProducerConsumerQueue`.
         """
         return self.__is_async
 
@@ -71,7 +83,6 @@ class ProducerConsumerQueue(Generic[T]):
         """The internal event, signaled when items are added.
         """
         return self.__notify_event
-
 
 
     def put(self, item: T) -> None:
@@ -117,12 +128,13 @@ class ProducerConsumerQueue(Generic[T]):
 
         return Task.run(async_fill)
 
-    def try_take(
+    def take(
         self,
         timeout: float | None = 0, /,
         interrupt: Interrupt | None = None
-    ) -> tuple[T | None, bool]:
-        """Tries to take an item from the queue.
+    ) -> T:
+        """Tries to take an item from the queue. If a timeout is specified, call will block until an item can be produced
+        or timeout is met. Will raise a `TimeoutError` exception if timeout is not None and timeout exceeded.
 
         Args:
             timeout (float, optional): The timeout. Defaults to 0.
@@ -132,18 +144,23 @@ class ProducerConsumerQueue(Generic[T]):
             TimeoutError: Raises a TimeoutError if operation times out.
 
         Returns:
-            tuple[T | None, bool]: The item and a boolean value indicating success of the take operation
+            T: Returns the item produced from the queue.
         """
         was_empty = False
+        t_start = time()
+        initial_timeout = timeout
+
         while True:
+            timeout = max(0, timeout-(time()-t_start)) if timeout is not None else None
             try:
                 if self.__is_failed:
                     raise cast(Exception, self.__fail)
 
-                result = self.__queue.dequeue(timeout=timeout or 0, interrupt=interrupt)
+                result = self.__queue.dequeue(timeout = timeout or 0, interrupt=interrupt)
 
                 was_empty = False
-                return result, True
+
+                return result
             except TimeoutError:
                 if self.is_complete:
                     # if queue was completed in another thread, it may not be empty at this point,
@@ -151,39 +168,71 @@ class ProducerConsumerQueue(Generic[T]):
                     if not was_empty:
                         was_empty = True
                     else:
-                        return None, False
-                elif timeout == 0 or not self.__notify_event.wait(timeout, interrupt):
+                        raise TimeoutError
+                elif initial_timeout == 0 or not self.__notify_event.wait(timeout, interrupt):
                     raise TimeoutError
                 elif interrupt is not None:
                     interrupt.raise_if_signaled() # pragma: no cover
 
 
 
+    def try_take(
+        self,
+        timeout: float | None = 0, /,
+        interrupt: Interrupt | None = None
+    ) -> tuple[T | None, bool]:
+        """Tries to take an item from the queue. If a timeout is specified, call will block until an item can be produced
+        or timeout is met.
+
+        Args:
+            timeout (float, optional): The timeout. Defaults to 0.
+            interrupt (Interrupt, optional): The Interrupt. Defaults to None.
+
+        Returns:
+            tuple[T | None, bool]: The item and a boolean value indicating success of the take operation
+        """
+        try:
+            return self.take(timeout, interrupt = interrupt), True
+        except TimeoutError:
+            return None, False
+
+
     def complete(self) -> None:
         """Marks the queue completed. The queue will not accept additional items afterwards.
         """
-        if self.__is_async:
-            raise QueueLinkedToAnotherQueueError
-        elif self.__is_complete:
-            raise QueueCompletedError
+        with self.__queue.synchronization_lock:
+            if self.__is_async:
+                raise QueueLinkedToAnotherQueueError
+            elif self.__is_complete:
+                raise QueueCompletedError
 
-        self.__is_complete = True
-        self.__notify_event.signal()
+            self.__is_complete = True
+            self.__notify_event.signal()
 
 
     def fail(self, error: Exception) -> None:
-        """Marks the queue failed. The queue will not accept additional items afterwards.
+        """Marks the queue failed with the specified exception. The queue will not accept additional items afterwards.
+
+        Args:
+            error (Exception): The exeception that caused the process to fail.
 
         Raises:
             QueueCompletedError: Raises an exception if queue is already completed.
         """
-        if self.__is_complete:
-            raise QueueCompletedError
+        if self.__is_async:
+            raise QueueLinkedToAnotherQueueError
 
-        self.fail_if_not_complete(error)
+        with self.__queue.synchronization_lock:
+            if self.__is_complete:
+                raise QueueCompletedError
+
+            self.fail_if_not_complete(error)
 
     def fail_if_not_complete(self, error: Exception) -> None:
-        """Marks the queue failed. The queue will not accept additional items afterwards
+        """If not completed, marks the queue failed. The queue will not accept additional items afterwards
+
+        Args:
+            error (Exception): The exeception that caused the process to fail.
 
         Raises:
             QueueLinkedToAnotherQueueError: Raises an exception if queue is async (eg. linked to the output of a ProducerConsumerQueueIterator).
@@ -191,36 +240,25 @@ class ProducerConsumerQueue(Generic[T]):
         if self.__is_async:
             raise QueueLinkedToAnotherQueueError
 
-        self.__fail = error
-        self.__is_complete = True
-        self.__is_failed = True
-        self.__notify_event.signal()
+        with self.__queue.synchronization_lock:
+            if not self.__is_complete:
+                self.__fail = error
+                self.__is_complete = True
+                self.__is_failed = True
+                self.__notify_event.signal()
+            else:
+                pass
 
 
     def get_iterator(self) -> PIterable[T]:
-        """Returns a blocking iterator for this ProducerConsumerQueue.
+        """Returns a `ProducerConsumerQueueIterator[T]` used for blocking interruptable iteration.
 
         Returns:
             ProducerConsumerQueueIterator[T]: A ProducerConsumerQueueIterator instance
         """
+
+        from runtime.threading.core.parallel.producer_consumer_queue_iterator import ProducerConsumerQueueIterator
+
         return ProducerConsumerQueueIterator[T](self)
 
 
-class ProducerConsumerQueueIterator(PIterable[T], PIterator[T]):
-    """The ProducerConsumerQueueIterator class is a parallel Iterator/Iterable class
-    which allows for interruption of the iteration.
-    """
-    __slots__ = ["__queue"]
-
-    def __init__(self, queue: ProducerConsumerQueue[T]):
-        self.__queue = queue
-
-    def __iter__(self) -> PIterator[T]:
-        return self
-
-    def next(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> T:
-        result, success = self.__queue.try_take(timeout, interrupt)
-        if success:
-            return cast(T, result)
-        else:
-            raise StopIteration

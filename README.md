@@ -11,7 +11,36 @@ This project provides a task based abstraction to threading.
 ## Example
 
 ```python
+from runtime.threading import InterruptSignal
+from runtime.threading.tasks import Task, ContinuationOptions
 
+try:
+     signal = InterruptSignal()
+     i = 227
+     m = 0.78
+
+     def fn(task: Task[float], i: float, m: float) -> float:
+          task.interrupt.raise_if_signaled()
+          return i * m
+
+     def fn_continue(task: Task[float], preceding_task: Task[float], m: float) -> float:
+          return preceding_task.result * m
+
+     task1 = Task.run(fn, i, m)
+     task2 = task1.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY, fn_continue, m)
+
+     result1 = task1.result # -> 177.06
+     result2 = task2.result # -> 138.1068
+
+     task3 = Task.create(interrupt = signal.interrupt, lazy = True).plan(fn, task1.result, m)
+
+     signal.signal()
+
+     # task3 is run lazily when result property is accessed
+     result3 = task3.result # TaskInterruptedException
+
+except InterruptException:
+     pass
 ```
 ## Full documentation
 

@@ -23,32 +23,32 @@ class PFn(Generic[Tin, Tout]):
     __slots__ = ["__fn", "_parent", "_parallelism"]
 
     @overload
-    def __init__(self, fn: Callable[[Task[Tout], Tin], Iterable[Tout]]) -> None:
+    def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]]) -> None:
         """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Task[Tout], Tin]): The function to parallelize
+            fn (Callable[[Task[Iterable[Tout]], Tin]): The function to parallelize
         """
         ...
     @overload
-    def __init__(self, fn: Callable[[Task[Tout], Tin], Iterable[Tout]], parallelism: int) -> None:
+    def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]], parallelism: int) -> None:
         """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Task[Tout], Tin]): The function to parallelize
+            fn (Callable[[Task[Iterable[Tout]], Tin]): The function to parallelize
             parallelism (int): An int between 1 and 32 representing the max no. of parallel threads.
         """
         ...
     @overload
-    def __init__(self, fn: Callable[[Task[Tout], Tin], Iterable[Tout]], parallelism: float) -> None:
+    def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]], parallelism: float) -> None:
         """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Task[Tout], Tin]): The function to parallelize
+            fn (Callable[[Task[Iterable[Tout]], Tin]): The function to parallelize
             parallelism (float): A float between 0.0 and 1.0 representing the no. of parallel threads relative to the max parallelism of the current PContext
         """
         ...
-    def __init__(self, fn: Callable[[Task[Tout], Tin], Iterable[Tout]] | None, parallelism: int | float = 1.0):
+    def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]] | None, parallelism: int | float = 1.0):
         self._parent: PFn[Any, Tin] | None = None
         self.__fn = fn
 

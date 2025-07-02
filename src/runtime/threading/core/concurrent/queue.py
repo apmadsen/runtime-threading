@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TypeVar, Iterable, Iterator, cast
+from time import time
 
 from runtime.threading.core.auto_clear_event import AutoClearEvent
 from runtime.threading.core.lock import Lock
@@ -20,6 +21,12 @@ class Queue(Iterable[T]):
         self.__tail: Queue.Node | None = None
         self.__lock = Lock()
         self.__notify_event = AutoClearEvent(purpose = "CONCURRENT_QUEUE_NOTIFY")
+
+    @property
+    def synchronization_lock(self) -> Lock:
+        """The internal lock used for synchronization
+        """
+        return self.__lock
 
     @staticmethod
     def from_items(items: Iterable[Tinput]) -> Queue[Tinput]:
@@ -110,11 +117,14 @@ class Queue(Iterable[T]):
         Raises:
             TimeoutError: Raises a TimeoutError if operation times out.
         """
+        t_start = time()
         while True:
+            timeout = max(0, timeout-(time()-t_start)) if timeout is not None else None
             result, success = self.try_dequeue(timeout, interrupt)
+
             if success:
                 return cast(T, result)
-            elif self.__notify_event.wait(timeout, interrupt):
+            elif timeout is None or ( timeout > 0 and self.__notify_event.wait(timeout, interrupt) ):
                 if interrupt is not None:
                     interrupt.raise_if_signaled()
             else:
@@ -149,7 +159,6 @@ class Queue(Iterable[T]):
                 return cast(Toutput, result)
             else:
                 raise StopIteration
-
 
 
     class Node:

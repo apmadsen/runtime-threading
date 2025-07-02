@@ -10,7 +10,7 @@ The `LockBase` class is the base class of locks (`Lock` and `Semaphore`).
 
 ## Constructors
 
-### __init__(lock: _RLock | TLock | Semaphore_)
+### \_\_init\_\_(lock: _RLock | TLock | Semaphore_)
 
 - lock `RLock | TLock | Semaphore`: A builtin mutex from the threading module.
 

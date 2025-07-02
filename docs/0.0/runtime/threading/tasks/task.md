@@ -7,13 +7,13 @@
 
 # Task
 
-The Task class is an abstraction of a regular thread, and it represents an application task of work.
+The `Task` class is an abstraction of a regular thread, and it represents an application task of work.
 
 ### Example
 
 ```python
-from runtime.threading import InterruptSignal
-from runtime.threading.tasks import Task, ContinuationOptions
+from runtime.threading import InterruptSignal, InterruptException
+from runtime.threading.tasks import Task
 
 try:
      signal = InterruptSignal()
@@ -24,36 +24,21 @@ try:
           task.interrupt.raise_if_signaled()
           return i * m
 
-     def fn_continue(task: Task[float], preceding_task: Task[float], m: float) -> float:
-          return preceding_task.result * m
+     task = Task.create(interrupt = signal.interrupt, lazy = True).run(fn, i, m)
 
-     task1 = Task.run(fn, i, m)
-     task2 = task1.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY, fn_continue, m)
-
-     result1 = task1.result # -> 177.06
-     result2 = task2.result # -> 138.1068
-
-     task3 = Task.create(interrupt = signal.interrupt, lazy = True).plan(fn, task1.result, m)
-
-     signal.signal()
-
-     # task3 is run lazily when result property is accessed
-     result3 = task3.result # TaskInterruptedException
+     result = task.result # -> 177.06
 
 except InterruptException:
      pass
-
-
-
 ```
 
 ## Constructors
 
 > Instead of using the constructer directly, use the functions `Task.Create()`, `Task.Plan()` and `Task.Run()` instead.
 
-### __init__(fn: _Callable[[Task[T]], T]_, name: _str | None_ = _None_, interrupt: _Interrupt | None_ = _None_, lazy: _bool_ = _False_)
+### \_\_init\_\_(fn: _Callable[[Task[T]], T]_, name: _str | None_ = _None_, interrupt: _Interrupt | None_ = _None_, lazy: _bool_ = _False_)
 
-- fn `Callable[[Task[T]], T]`: The function which will be called to do the work.
+- fn `(task: [Task[T]) -> T`: The function which will be called to do the work.
 - name `str | None`: The name of the task (and the underlying thread). Defaults to `None`.
 - interrupt `Interrupt | None`: The external interrupt. Defaults to `None`.
 - lazy `bool`: Specifies whether or not the task may be run lazily when awaited. Defaults to False.
@@ -156,9 +141,30 @@ Returns `True` if task completed, `False` otherwise.
 Creates and returns a continuation task which is run when this task transitions into a state matched by that specified in 'options' argument.
 
 - options `ContinuationOptions`: Specifies when and how continuation is run.
-- fn: `Callable[[Task[Tcontinuation], Task[T], P], Tcontinuation]`: The target function.
+- fn: `(task: Task[Tcontinuation], preceding_task: Task[T], P) -> Tcontinuation`: The targetfunction.
 - *args `P.args`: The positional target arguments (if any).
 - **kwargs `P.kwargs`: The keyword target arguments (if any).
+
+### Example
+
+```python
+from runtime.threading.tasks import Task, ContinuationOptions
+
+i = 227
+m = 0.78
+
+def fn(task: Task[float], i: float, m: float) -> float:
+     return i * m
+
+def fn_continue(task: Task[float], preceding_task: Task[float], m: float) -> float:
+     return preceding_task.result * m
+
+task1 = Task.run(fn, i, m)
+task2 = task1.continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY, fn_continue, m)
+
+result1 = task1.result # -> 177.06
+result2 = task2.result # -> 138.1068
+```
 
 ## Static functions
 
@@ -182,25 +188,45 @@ Waits for all of the specified tasks to complete. Returns true if all of the tas
 
 ### with_any(tasks: _Sequence[Task[Any]]_, /, options: _ContinuationOptions_ = _ContinuationOptions.ON_COMPLETED_SUCCESSFULLY_, interrupt: _Interrupt | None_ = _None_) -> _ContinuationProto_
 
-Initiates the creation of a new continuation which is run when any of the specified tasks are completed. Returns a ContinuationProto wrapper.
+Initiates the creation of a new continuation which is run when any of the specified tasks are completed. Returns a `ContinuationProto` wrapper.
 
 - tasks `Sequence[Task]`: The tasks to await.
 - options `ContinuationOptions`: Specifies when and how continuation is run. Defaults to `ON_COMPLETED_SUCCESSFULLY`
 - interrupt `Interrupt | None`: An Interrupt for this specific call. Defaults to `None`.
-
-
 
 ### with_all(tasks: _Sequence[Task[Any]]_, /, options: _ContinuationOptions_ = _ContinuationOptions.ON_COMPLETED_SUCCESSFULLY_, interrupt: _Interrupt | None_ = _None_) -> _ContinuationProto_
 
-Initiates the creation of a new continuation which is run when all of the specified tasks are completed. Returns a ContinuationProto wrapper.
+Initiates the creation of a new continuation which is run when all of the specified tasks are completed. Returns a `ContinuationProto` wrapper.
 
 - tasks `Sequence[Task]`: The tasks to await.
 - options `ContinuationOptions`: Specifies when and how continuation is run. Defaults to `ON_COMPLETED_SUCCESSFULLY`
 - interrupt `Interrupt | None`: An Interrupt for this specific call. Defaults to `None`.
 
+
+### Example
+
+```python
+from typing import Sequence
+from runtime.threading.tasks import Task, ContinuationOptions
+
+i = 227
+m = 0.78
+
+def fn(task: Task[float], i: float, m: float) -> float:
+     return i * m
+
+def fn_continue(task: Task[float], preceding_tasks: Sequence[Task[float]]) -> float:
+     return sum(( task.result for task in preceding_tasks ))
+
+tasks = [ Task.run(fn, i, m) for x in range(5) ]
+task = Task.with_all(tasks, ContinuationOptions.DEFAULT).run(fn_continue)
+
+result = task.result # -> 885.3
+```
+
 ### create(*, name: _str | None_ = _None_, interrupt: _Interrupt | None_ = _None_, scheduler: _TaskScheduler | None_ = _None_, lazy: _bool_ = _False_) -> _TaskProto_
 
-Initiates the creation of a new Task. Returns a TaskProto wrapper.
+Initiates the creation of a new Task. Returns a `TaskProto` wrapper.
 
 - name `str | None`: The name if the task. Defaults to `None`.
 - interrupt `Interrupt | None`: An external interrupt used to stop the task. Defaults to `None`.
@@ -211,7 +237,7 @@ Initiates the creation of a new Task. Returns a TaskProto wrapper.
 
 Creates a new task without scheduling it. Use `Task.Create().plan()` for more control of the task specifics. Returns a new task.
 
-- fn `Callable[[Task[Tresult], P], Tresult]`: The target function.
+- fn `(task: Task[Tresult], P) -> Tresult`: The target function.
 - *args `P.args`: The positional target arguments (if any).
 - **kwargs `P.kwargs`: The keyword target arguments (if any).
 
@@ -219,7 +245,7 @@ Creates a new task without scheduling it. Use `Task.Create().plan()` for more co
 
 Creates a new task and schedules it on the default scheduler. Use `Task.Create().run()` for more control of the task specifics. Returns a new task.
 
-- fn `Callable[[Task[Tresult], P], Tresult]`: The target function.
+- fn `(task: Task[Tresult], P) -> Tresult`: The target function.
 - *args `P.args`: The positional target arguments (if any).
 - **kwargs `P.kwargs`: The keyword target arguments (if any).
 
@@ -228,7 +254,7 @@ Creates a new task and schedules it on the default scheduler. Use `Task.Create()
 Creates a new task which will be scheduled on the default scheduler after specified time. Use `Task.Create().run_after()` for more control of the task specifics. Returns a new task.
 
 - time `float`: The time in seconds to wait before scheduling the task:
-- fn `Callable[[Task[Tresult], P], Tresult]`: The target function.
+- fn `(task: Task[Tresult], P) -> Tresult`: The target function.
 - *args `P.args`: The positional target arguments (if any).
 - **kwargs `P.kwargs`: The keyword target arguments (if any).
 
@@ -237,3 +263,11 @@ Creates a new task which will be scheduled on the default scheduler after specif
 Creates and returns a task which is completed with a preset result.
 
 - result `Tresult`: The predefined result.
+
+
+```python
+from runtime.threading.tasks import Task
+
+task = Task.from_result("abc") # -> Task[str]
+result = task.result # -> "abc"
+```

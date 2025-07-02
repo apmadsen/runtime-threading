@@ -4,11 +4,13 @@ from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.interrupt_exception import InterruptException
 from runtime.threading.core.tasks.task import Task
+from runtime.threading.core.tasks.config import DEFAULT_PARALLELISM
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue, ProducerConsumerQueueIterator
+from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.parallel.producer_consumer_queue_iterator import ProducerConsumerQueueIterator
 from runtime.threading.core.tasks.helpers import get_function_name
 
 Tin = TypeVar("Tin")
@@ -37,14 +39,14 @@ class ProcessProto(Generic[Tin]):
     @overload
     def do(
         self,
-        fn: Callable[Concatenate[Task[Any], Tin, P], Iterable[Tout]], /,
+        fn: Callable[Concatenate[Task[Iterable[Tout]], Tin, P], Iterable[Tout]], /,
         *args: P.args,
         **kwargs: P.kwargs
     ) -> PIterable[Tout]:
         """Initiates parallel processing immediately.
 
         Args:
-            fn (Callable[Concatenate[Task[Any], Tin, P], Iterable[Tout]]): The target function
+            fn (Callable[Concatenate[Task[Tout], Tin, P], Iterable[Tout]]): The target function
 
         Returns:
             PIterable[Tout]: Returns an iterator.
@@ -53,7 +55,7 @@ class ProcessProto(Generic[Tin]):
     @overload
     def do(
         self,
-        fn: Callable[Concatenate[Task[Any], Tin, P], Iterable[Tout]], /,
+        fn: Callable[Concatenate[Task[Iterable[Tout]], Tin, P], Iterable[Tout]], /,
         output_queue: ProducerConsumerQueue[Tout],
         *args: P.args,
         **kwargs: P.kwargs
@@ -61,7 +63,7 @@ class ProcessProto(Generic[Tin]):
         """Initiates parallel processing immediately and outputs data to an existing queue.
 
         Args:
-            fn (Callable[Concatenate[Task[Any], Tin, P], Iterable[Tout]]): The target function
+            fn (Callable[Concatenate[Task[Iterable[Tout]], Tin, P], Iterable[Tout]]): The target function
 
         Returns:
             PIterable[Tout]: Returns a task.
@@ -75,7 +77,7 @@ class ProcessProto(Generic[Tin]):
         **kwargs: P.kwargs
     ) -> PIterable[Tout] | Task[None]:
 
-        parallelism = max(1, self.__parallelism or 2)
+        parallelism = max(1, self.__parallelism or DEFAULT_PARALLELISM)
         signal = InterruptSignal(self.__interrupt) if self.__interrupt else InterruptSignal()
 
         queue_in = self.__items if isinstance(self.__items, ProducerConsumerQueueIterator) else ProducerConsumerQueue[Tin](self.__items).get_iterator() # put items in a ProducerConsumerQueue, if items is not a ProducerConsumerQueueIterator instance
@@ -140,7 +142,7 @@ def process(
     interrupt: Interrupt | None = None,
     scheduler: TaskScheduler | None = None,
 ) -> ProcessProto[Tin]:
-    """Initiates a parallel process.
+    """Initiates a parallel process of multiple items.
 
     Args:
         items (Iterable[Tin]): The items to process.
