@@ -5,14 +5,13 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      for_each
 
-# for_each
+# for_each(items: _Iterable[T]_, /, task_name: _str | None_ = _None_, parallelism: _int | None_ = _None_, interrupt: _Interrupt | None_ = _None_, scheduler: _TaskScheduler | None_ = _None_) -> _ForEachProto[T]_
 
 The `for_each` function inititates a parallel process of multiple items and returns a `ForEachProto` wrapper.
 
 ### Example
 
 ```python
-from random import randint
 from runtime.threading.tasks import Task, ContinuationOptions
 from runtime.threading import parallel
 
@@ -24,7 +23,7 @@ def fn(task: Task[None], s: int) -> None:
 def fn_done(task: Task[None], preceding_task: Task[None]) -> None:
      queue.complete()
 
-items = [ randint(0,100000) for _ in range(100)]
+items = [ i for i in range(100)]
 task1 = parallel.for_each(items, parallelism=5).do(fn)
 task1.continue_with(ContinuationOptions.DEFAULT, fn_done)
 

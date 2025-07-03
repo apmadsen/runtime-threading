@@ -13,10 +13,9 @@ The items aren't divided amongst the consumers, but duplicated thus enabling mul
 ### Example
 
 ```python
-from random import randint
 from runtime.threading import parallel
 
-items = [ randint(0,100000) for _ in range(100)]
+items = [ i for i in range(100)]
 
 distributor = parallel.distribute(items)
 

@@ -4,7 +4,7 @@
    [threading](/docs/0.0/runtime/threading/module.md) >
     acquire_or_fail
 
-# acquire_or_fail
+# acquire_or_fail(lock: _Lock | Semaphore_, timeout: _float_, fail: _Callable[[], Exception]_, interrupt: _Interrupt | None_ = _None_) -> _ContextManager[None]_
 
 The `acquire_or_fail` function tries to acquire a lock for a specific period of time(seconds), and, if unsuccessful, raises a specific exception afterwards.
 

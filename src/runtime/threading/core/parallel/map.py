@@ -68,7 +68,7 @@ def map(
     task_name: str | None = None,
     parallelism: int | None = None,
     interrupt: Interrupt | None = None,
-    scheduler: TaskScheduler | None = None,
+    scheduler: TaskScheduler | None = None
 ) -> MapProto[Tin]:
     """Initiates a parallel mapping process.
 

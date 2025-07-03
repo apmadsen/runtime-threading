@@ -2,6 +2,7 @@ from typing import TypeVar, Generic, Iterable, Any, cast, overload
 from time import time
 
 from runtime.threading.core.event import Event
+from runtime.threading.core.lock import Lock
 from runtime.threading.core.auto_clear_event import AutoClearEvent
 from runtime.threading.core.concurrent.queue import Queue
 from runtime.threading.core.parallel.parallel_exception import ParallelException
@@ -22,7 +23,7 @@ class ProducerConsumerQueue(Generic[T]):
     The workflow is as follows: The producer thread is responsible for putting items into the queue, and subsequently calline `complete()` when done, while the consumer merely
     consumes the items by either calling `try_take()` repeatedly or iterating over the iterator created by calling `get_iterator()`.
     """
-    __slots__ = [ "__queue", "__notify_event", "__is_complete", "__is_failed", "__fail", "__is_async" ]
+    __slots__ = [ "__lock", "__async_put_done", "__queue", "__notify_event", "__is_complete", "__is_failed", "__fail", "__is_async" ]
 
     @overload
     def __init__(self) -> None:
@@ -38,6 +39,8 @@ class ProducerConsumerQueue(Generic[T]):
         """
         ...
     def __init__(self, data: Iterable[T] | None = None):
+        self.__lock = Lock()
+        self.__async_put_done = Event()
         self.__queue: Queue[T] = Queue()
         self.__notify_event = AutoClearEvent(purpose = "PRODUCER_CONSUMER_QUEUE_NOTIFY")
         self.__is_complete = False
@@ -48,17 +51,23 @@ class ProducerConsumerQueue(Generic[T]):
         if data is not None:
             from runtime.threading.core.parallel.producer_consumer_queue_iterator import ProducerConsumerQueueIterator
             if isinstance(data, ProducerConsumerQueueIterator):
-                self.__is_async = True
 
                 def complete(task_in: Task[Any], task: Task[T]):
                     self.__is_complete = True
                     self.__notify_event.signal()
 
-                self.put_many_async(cast(Iterable[T], data)).continue_with(ContinuationOptions.DEFAULT, complete)
+                self.__put_many_async(cast(Iterable[T], data)).continue_with(ContinuationOptions.DEFAULT, complete)
+                self.__is_async = True
             else:
                 self.put_many(data)
                 self.__is_complete = True
                 self.__notify_event.signal()
+
+    @property
+    def synchronization_lock(self) -> Lock: # pragma: no cover
+        """The internal lock used for synchronization
+        """
+        return self.__lock
 
     @property
     def is_complete(self) -> bool:
@@ -93,7 +102,7 @@ class ProducerConsumerQueue(Generic[T]):
         """
         if self.__is_async:
             raise QueueLinkedToAnotherQueueError
-        elif self.__is_complete:
+        if self.__is_complete:
             raise QueueCompletedError
 
         self.__queue.enqueue(item)
@@ -107,23 +116,20 @@ class ProducerConsumerQueue(Generic[T]):
         """
         if self.__is_async:
             raise QueueLinkedToAnotherQueueError
-        elif self.__is_complete:
+        if self.__is_complete:
             raise QueueCompletedError
 
         for item in items:
             self.__queue.enqueue(item)
             self.__notify_event.signal()
 
-    def put_many_async(self, items: Iterable[T]) -> Task[Any]:
-        """Adds multiple items to the queue asynchronously (non-blocking).
-
-        Args:
-            items (Iterable[T]): The items
-        """
+    def __put_many_async(self, items: Iterable[T]) -> Task[Any]:
         def async_fill(task: Task[Any]):
             for item in items:
                 self.__queue.enqueue(item)
                 self.__notify_event.signal()
+
+            self.__async_put_done.signal()
             self.__notify_event.signal()
 
         return Task.run(async_fill)
@@ -146,7 +152,6 @@ class ProducerConsumerQueue(Generic[T]):
         Returns:
             T: Returns the item produced from the queue.
         """
-        was_empty = False
         t_start = time()
         initial_timeout = timeout
 
@@ -158,22 +163,31 @@ class ProducerConsumerQueue(Generic[T]):
 
                 result = self.__queue.dequeue(timeout = timeout or 0, interrupt=interrupt)
 
-                was_empty = False
-
                 return result
             except TimeoutError:
-                if self.is_complete:
-                    # if queue was completed in another thread, it may not be empty at this point,
-                    # so we need to run iteration one more time just to make sure
-                    if not was_empty:
-                        was_empty = True
-                    else:
-                        raise TimeoutError
-                elif initial_timeout == 0 or not self.__notify_event.wait(timeout, interrupt):
-                    raise TimeoutError
-                elif interrupt is not None:
+                if interrupt is not None:
                     interrupt.raise_if_signaled() # pragma: no cover
 
+                if self.__lock.acquire(0):
+                    try:
+                        if self.is_complete:
+                            # if queue was completed in another thread, it may not be empty at this point,
+                            # so we need to run iteration one more time just to make sure
+
+                            if result := self.__queue.dequeue(0, interrupt = interrupt):
+                                return result
+                            else:
+                                raise # pragma: no cover
+
+                    except TimeoutError:
+                        raise
+                    finally:
+                        self.__lock.release()
+                else:
+                    continue
+
+                if initial_timeout == 0 or not self.__notify_event.wait(timeout, interrupt):
+                    raise TimeoutError
 
 
     def try_take(
@@ -200,14 +214,15 @@ class ProducerConsumerQueue(Generic[T]):
     def complete(self) -> None:
         """Marks the queue completed. The queue will not accept additional items afterwards.
         """
-        with self.__queue.synchronization_lock:
-            if self.__is_async:
-                raise QueueLinkedToAnotherQueueError
-            elif self.__is_complete:
+        if self.__is_async:
+            raise QueueLinkedToAnotherQueueError
+
+        with self.__lock:
+            if self.__is_complete:
                 raise QueueCompletedError
 
             self.__is_complete = True
-            self.__notify_event.signal()
+        self.__notify_event.signal()
 
 
     def fail(self, error: Exception) -> None:
@@ -221,10 +236,10 @@ class ProducerConsumerQueue(Generic[T]):
         """
         if self.__is_async:
             raise QueueLinkedToAnotherQueueError
+        if self.__is_complete:
+            raise QueueCompletedError
 
-        with self.__queue.synchronization_lock:
-            if self.__is_complete:
-                raise QueueCompletedError
+        with self.__lock:
 
             self.fail_if_not_complete(error)
 
@@ -240,15 +255,16 @@ class ProducerConsumerQueue(Generic[T]):
         if self.__is_async:
             raise QueueLinkedToAnotherQueueError
 
-        with self.__queue.synchronization_lock:
+        with self.__lock:
             if not self.__is_complete:
                 self.__fail = error
                 self.__is_complete = True
                 self.__is_failed = True
-                self.__notify_event.signal()
+                # self.__notify_event.signal()
             else:
                 pass
 
+        self.__notify_event.signal()
 
     def get_iterator(self) -> PIterable[T]:
         """Returns a `ProducerConsumerQueueIterator[T]` used for blocking interruptable iteration.

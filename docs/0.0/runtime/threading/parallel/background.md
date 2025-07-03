@@ -5,19 +5,18 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      background
 
-# background
+# background(*, task_name: _str | None_ = _None_, parallelism: _int | None_ = _None_, interrupt: _Interrupt | None_ = _None_, scheduler: _TaskScheduler | None_ = _None_) -> _BackgroundProto_
 
 The `background` function inititates a parallel process of multiple items and returns a `BackgroundProto` wrapper.
 
 ### Example
 
 ```python
-from random import randint
 from runtime.threading.tasks import Task
 from runtime.threading import parallel
 
 queue = parallel.ProducerConsumerQueue[int]()
-items = [ randint(0,100000) for _ in range(100)]
+items = [ i for i in range(100) ]
 facit = sum(map(lambda x: x*2, items))
 
 def fn(task: Task[None], items: list[int]) -> None:

@@ -4,7 +4,7 @@
    [threading](/docs/0.0/runtime/threading/module.md) >
     sleep
 
-# sleep
+# sleep(time: _float_, /, interrupt: _Interrupt | None_ = _None_) -> _None_
 
 The `sleep` function is directly linked to `terminate_event.wait` and should be used as a direct replacement for `time.sleep(x)` due to the fact that all awaitables in this package support task suspension, whereas the builtin do not.
 

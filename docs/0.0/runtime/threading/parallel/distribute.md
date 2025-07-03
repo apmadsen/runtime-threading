@@ -5,19 +5,25 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      distribute
 
-# distribute
+# distribute(items: _Iterable[T]_) -> _Distributor[T]_
 
-The `distribute` function creates a `Distributor` instance which is used to distribute a sequence of items into several consumers.
+Creates a `Distributor` instance which is used to distribute a sequence of items into several consumers.
 
 - items `Iterable[T]`: The items to distribute.
+
+# distribute(items: _Iterable[T]_, scheduler: _TaskScheduler_) -> _Distributor[T]_
+
+Creates a `Distributor` instance which is used to distribute a sequence of items into several consumers.
+
+- items `Iterable[T]`: The items to distribute.
+- scheduler `TaskScheduler`: The scheduler onto which tasks are scheduled.
 
 ### Example
 
 ```python
-from random import randint
 from runtime.threading import parallel
 
-items = [ randint(0,100000) for _ in range(100)]
+items = [ i for i in range(100) ]
 
 distributor = parallel.distribute(items)
 

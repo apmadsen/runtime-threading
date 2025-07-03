@@ -29,7 +29,7 @@ def acquire_or_fail(
     lock: Lock | Semaphore,
     timeout: float,
     fail: Callable[[], Exception],
-    interrupt: Interrupt | None = None,
+    interrupt: Interrupt | None = None
 ) -> ContextManager[None]:
     """Tries to acquire lock for a specific period of time, and, if unsuccessful,
     raises a specific exception after timeout.

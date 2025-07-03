@@ -23,7 +23,7 @@ class Queue(Iterable[T]):
         self.__notify_event = AutoClearEvent(purpose = "CONCURRENT_QUEUE_NOTIFY")
 
     @property
-    def synchronization_lock(self) -> Lock:
+    def synchronization_lock(self) -> Lock: # pragma: no cover
         """The internal lock used for synchronization
         """
         return self.__lock

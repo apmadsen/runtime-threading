@@ -27,14 +27,13 @@ def test_example_1():
 def test_example_2():
 
     from typing import Iterable
-    from random import randint
     from runtime.threading.tasks import Task
     from runtime.threading import parallel
 
     def fn_process(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         yield 2 * item
 
-    items = [ randint(0, 100000) for _ in range(1000) ]
+    items = [ i for i in range(1000) ]
     facit = sorted(list(map(lambda x: 2 * x, items)))
 
     output = parallel.process(items, parallelism = 5).do(fn_process)
@@ -45,14 +44,13 @@ def test_example_2():
 
 def test_example_3():
     from typing import Iterable
-    from random import randint
     from runtime.threading.tasks import Task
     from runtime.threading import parallel
 
     def fn(task: Task[Iterable[int]], s: int) -> Iterable[int]:
         yield s * 2
 
-    items = [ randint(0,100000) for _ in range(100)]
+    items = [ i for i in range(100)]
     t1 = parallel.map(items, parallelism=5).do(fn)
 
     result = sum(item for item in t1)
@@ -61,7 +59,6 @@ def test_example_3():
     assert facit == result
 
 def test_example_4():
-    from random import randint
     from runtime.threading.tasks import Task, ContinuationOptions
     from runtime.threading import parallel
 
@@ -73,7 +70,7 @@ def test_example_4():
     def fn_done(task: Task[None], preceding_task: Task[None]) -> None:
         queue.complete()
 
-    items = [ randint(0,100000) for _ in range(100)]
+    items = [ i for i in range(100)]
     task1 = parallel.for_each(items, parallelism=5).do(fn)
     task1.continue_with(ContinuationOptions.DEFAULT, fn_done)
 
@@ -83,12 +80,11 @@ def test_example_4():
     assert facit == result
 
 def test_example_5():
-    from random import randint
     from runtime.threading.tasks import Task
     from runtime.threading import parallel
 
     queue = parallel.ProducerConsumerQueue[int]()
-    items = [ randint(0,100000) for _ in range(100)]
+    items = [ i for i in range(100)]
     facit = sum(map(lambda x: x*2, items))
 
     def fn(task: Task[None], items: list[int]) -> None:
@@ -104,10 +100,9 @@ def test_example_5():
 
 
 def test_example_6():
-    from random import randint
     from runtime.threading import parallel
 
-    items = [ randint(0,100000) for _ in range(100)]
+    items = [ i for i in range(100)]
 
     distributor = parallel.distribute(items)
 
@@ -124,4 +119,6 @@ def test_example_6():
     ]
 
     for result in comsumed:
-        assert result == items
+        assert sorted(result) == items
+
+

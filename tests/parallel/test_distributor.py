@@ -5,7 +5,7 @@ from random import randint
 from pytest import raises as assert_raises, fixture
 
 from runtime.threading import InterruptSignal, Interrupt, ThreadingException, InterruptException
-from runtime.threading.tasks import AggregateException
+from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
 from runtime.threading.parallel import distribute, ProducerConsumerQueue
 
 def test_basics(internals):
@@ -65,3 +65,32 @@ def test_interruption(internals):
         with assert_raises(InterruptException):
             result = sorted(output)
 
+
+
+# def test_stress_test():
+
+#     n = 100
+#     o = 100
+#     p = 5
+#     items = [ i for i in range(o)]
+
+#     with ConcurrentTaskScheduler(p+2) as scheduler:
+#         for i in range(n):
+#             print(f"test_example_6xxx {i=}/{n}")
+
+#             distributor = distribute(items, scheduler = scheduler)
+
+#             consumers = [
+#                 distributor.take()
+#                 for _ in range(p)
+#             ]
+
+#             task = distributor.start()
+
+#             comsumed = [
+#                 list(consumer)
+#                 for consumer in consumers
+#             ]
+
+#             for result in comsumed:
+#                 assert sum(result) == sum(items)

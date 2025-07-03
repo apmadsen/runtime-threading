@@ -1,6 +1,5 @@
 # pyright: basic
 from typing import Iterable, Any, cast
-from random import randint
 from pytest import raises as assert_raises, fixture
 
 from runtime.threading.tasks import Task, AggregateException
@@ -17,7 +16,6 @@ def test_background(internals):
 
     def fn(task: Task[Any], s: float):
         task.interrupt.raise_if_signaled()
-        sleep(s)
         while result := input.try_dequeue():
             if not result[1]:
                 break
@@ -45,7 +43,7 @@ def test_process(internals):
         return [2 * item]
 
     # test with a normal list iterable
-    items = [ randint(0, 100000) for _ in range(1000) ]
+    items = [ i for i in range(1000) ]
     facit = sorted(list(map(lambda x: 2 * x, items)))
 
     output = parallel.process(items, parallelism = 5).do(fn_process)
@@ -71,7 +69,7 @@ def test_process(internals):
 
 
 def test_process_error(internals):
-    items = [ randint(0, 100000) for _ in range(1000) ]
+    items = [ i for i in range(1000) ]
 
     def fn_process(task: Task[Iterable[float]], item: int) -> Iterable[float]:
         raise Exception()
@@ -83,7 +81,7 @@ def test_process_error(internals):
 
 
 def test_process_interrupt(internals):
-    items = [ randint(0, 100000) for _ in range(1000) ]
+    items = [ i for i in range(1000) ]
     cs = InterruptSignal()
 
     def fn_process(task: Task[Iterable[float]], item: int) -> Iterable[float]:
@@ -104,7 +102,7 @@ def test_for_each(internals):
     def fn(task: Task[Any], s: int) -> None:
         queue.put(s)
 
-    items = [ randint(0,100000) for _ in range(100)]
+    items = [ i for i in range(100)]
     t1 = parallel.for_each(items, parallelism=5).do(fn)
     t1.wait()
     queue.complete()
@@ -139,7 +137,7 @@ def test_map(internals):
     def fn(task: Task[Iterable[int]], s: int) -> Iterable[int]:
         yield s*2
 
-    items = [ randint(0,100000) for _ in range(100)]
+    items = [ i for i in range(100)]
     t1 = parallel.map(items, parallelism=5).do(fn)
 
     count = 0

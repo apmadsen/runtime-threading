@@ -78,12 +78,6 @@ Adds multiple items to the queue.
 
 - items `_Iterable[T]_`: The items to be added.
 
-### put_many_async(items: _Iterable[T]_) -> _Task[Any]_
-
-Adds multiple items to the queue asynchronously (non-blocking).
-
-- items `_Iterable[T]_`: The items to be added.
-
 ### take(timeout: _float | None_ = _0_, /, interrupt: _Interrupt | None_ = _None_) -> _T_
 
 Tries to take an item from the queue. If a timeout is specified, call will block until an item can be produced or timeout is met. Will raise a `TimeoutError` exception if no item can be produced and timeout is not `None`.

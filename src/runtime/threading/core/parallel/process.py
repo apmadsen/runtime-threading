@@ -140,7 +140,7 @@ def process(
     task_name: str | None = None,
     parallelism: int | None = None,
     interrupt: Interrupt | None = None,
-    scheduler: TaskScheduler | None = None,
+    scheduler: TaskScheduler | None = None
 ) -> ProcessProto[Tin]:
     """Initiates a parallel process of multiple items.
 

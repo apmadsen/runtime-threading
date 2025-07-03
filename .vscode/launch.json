@@ -19,7 +19,7 @@
             "module": "pytest",
             "console": "integratedTerminal",
             "args": [
-                "-v",
+                "-vv",
                 "-s",
                 "--cov-branch",
                 "--cov-report",

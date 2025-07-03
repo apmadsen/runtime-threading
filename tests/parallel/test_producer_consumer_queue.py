@@ -2,8 +2,8 @@
 from typing import List, Any, Iterable, cast
 from threading import Thread
 from re import escape
-from random import randint
 from pytest import raises as assert_raises, fixture
+from random import random
 
 from runtime.threading.parallel import ProducerConsumerQueue, ParallelException
 from runtime.threading.core.parallel.producer_consumer_queue import QueueCompletedError, QueueLinkedToAnotherQueueError
@@ -23,14 +23,14 @@ def test_basics(internals):
 
     assert o == len(items)
 
-    items1 = [ randint(0, 100000) for _ in range(1000) ]
+    items1 = [ i for i in range(1000) ]
     pcq1 = ProducerConsumerQueue[int]()
     pcq2 = ProducerConsumerQueue[int](pcq1.get_iterator())
 
     assert not pcq1.is_async
     assert pcq2.is_async
     assert not pcq2.wait_event.wait(0)
-    pcq1.put_many_async(items1).wait()
+    getattr(pcq1, "_ProducerConsumerQueue__put_many_async")(items1).wait()
     pcq1.complete()
 
     with assert_raises(ParallelException, match=escape(str(QueueCompletedError))):
@@ -73,7 +73,7 @@ def test_basics(internals):
     assert pcq3.is_failed
 
 def test_put_many(internals):
-    test_items = [ randint(0, 100000) for _ in range(100) ]
+    test_items = [ i for i in range(100) ]
     pcq = ProducerConsumerQueue[int]()
     t = Thread(target=add_many, args=(pcq, test_items))
     t.start()
@@ -125,7 +125,7 @@ def test_multiple_iterators(internals):
     def fn_consume(task: Task[list[int]], producer: ProducerConsumerQueue[int]) -> list[int]:
         result = []
 
-        for item in pcq.get_iterator():
+        for item in producer.get_iterator():
             result.append(item)
             task.interrupt.wait(0.01) # introduce some waiting to guarantee a fair distribution among the tasks
 
@@ -161,6 +161,59 @@ def test_chaining(internals):
 
     result = list(pcq_prev.get_iterator())
     assert sorted(result) == facit
+
+
+
+# def test_stress_test():
+#     o = 10
+#     p = 10
+#     z = 6
+
+
+#     def fn_consume(task: Task[None], producer: ProducerConsumerQueue[int], consumer: ProducerConsumerQueue[int], ops: int):
+#         task.interrupt.wait(random())
+#         for item in producer.get_iterator():
+#             if n > 10000 and item % 1000 == 0:
+#                 task.interrupt.wait(0.1)
+#             elif n > 1000 and item % 100 == 0:
+#                 task.interrupt.wait(0.01)
+#             elif n > 100 and item % 2 == 0:
+#                 task.interrupt.wait(0.001)
+
+#             consumer.put(item)
+
+#         consumer.complete()
+
+
+#     print(f"\nProducerConsumerQueue stress test {p=} {o=}")
+
+#     for i in range(1,z):
+#         n = o**i
+#         facit = [ i for i in range(n) ]
+
+#         print(f"{i=} {n=}")
+
+#         q_producer = ProducerConsumerQueue[int](facit)
+#         consumers: list[ProducerConsumerQueue[int]] = []
+#         consumer_tasks: list[Task[None]] = []
+
+#         with ConcurrentTaskScheduler(p) as scheduler:
+#             for _ in range(p):
+#                 q_consumer = ProducerConsumerQueue[int]()
+#                 t_consumer = Task.create(scheduler = scheduler).run(fn_consume, q_producer, q_consumer, n)
+#                 consumers.append(q_consumer)
+#                 consumer_tasks.append(t_consumer)
+
+#             Task.wait_all(consumer_tasks)
+
+#         consumed = [
+#             list(consumer.get_iterator())
+#             for consumer in consumers
+#         ]
+
+#         total = [ item for result in consumed for item in result ]
+
+#         assert sorted(total) == facit
 
 
 
