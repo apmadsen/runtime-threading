@@ -12,7 +12,7 @@ from runtime.threading.core.tasks.task_state import TaskState
 from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.concurrent.queue import Queue
 from runtime.threading.core.interrupt_signal import InterruptSignal
-from runtime.threading.core.tasks.config import TASK_KEEP_ALIVE, DEFAULT_PARALLELISM
+from runtime.threading.core.defaults import TASK_KEEP_ALIVE, DEFAULT_PARALLELISM
 
 
 class ConcurrentTaskScheduler(TaskScheduler):

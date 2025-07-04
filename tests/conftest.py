@@ -8,7 +8,7 @@ from threading import Thread, Event, RLock, enumerate as get_threads, main_threa
 
 from runtime.threading.core.event import terminate_event
 from runtime.threading.core.continuation import Continuation
-from runtime.threading.core.tasks.config import TASK_KEEP_ALIVE
+from runtime.threading.core.defaults import TASK_KEEP_ALIVE
 from runtime.threading.core.tasks.helpers import get_function_name
 from runtime.threading.core.tasks.schedulers.concurrent_task_scheduler import ConcurrentTaskScheduler
 from runtime.threading.core.testing.debug import enable_debugging, EventsDebugger, LocksDebugger

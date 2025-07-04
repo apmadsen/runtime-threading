@@ -10,6 +10,13 @@
 
 ### [schedulers](schedulers/module.md)
 
+## Variables
+
+- DEFAULT_PARALLELISM `int`: The default parallelism. Defaults to `min(4, max(2, cpu_count())).`
+- TASK_SUSPEND_AFTER `float`: The no. of seconds before suspending a task awaiting a lock or event. Defaults to `0.1`
+- TASK_KEEP_ALIVE `float`: The no. of seconds background threads are kept alive by task schedulers before being reclaimed. Defaults to `0.1`
+- POLL_INTERVAL `float`: The polling interval of events. Defaults to `0.1`
+
 ## Classes
 
 ### [AggregateException](aggregate_exception.md)

@@ -9,7 +9,7 @@ from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.lock import Lock
 from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
-from runtime.threading.core.tasks.config import DEFAULT_PARALLELISM
+from runtime.threading.core.defaults import DEFAULT_PARALLELISM
 
 class Stack(local):
     __stack: deque[PContext] | None
@@ -35,7 +35,6 @@ class Stack(local):
             return True
         else: # pragma: no cover
             return False
-
 
 LOCK = Lock()
 STACK = Stack()
@@ -90,22 +89,26 @@ class PContext():
 
     @property
     def id(self) -> int:
-        """The ID of the PContext instance."""
+        """The ID of the PContext instance.
+        """
         return self.__id # pragma: no cover
 
     @property
     def max_parallelism(self) -> int:
-        """The max degree of parallelism a parallel operation should use."""
+        """The max degree of parallelism a parallel operation should use.
+        """
         return self.__max_parallelism
 
     @property
     def scheduler(self) -> TaskScheduler:
-        """The scheduler for internal tasks."""
+        """The scheduler for internal tasks.
+        """
         return self.__scheduler
 
     @property
     def interrupt(self) -> Interrupt:
-        """The external Interrupt used to interrupt a parallel operation."""
+        """The external Interrupt used to interrupt a parallel operation.
+        """
         return self.__interrupt_signal.interrupt
 
     @staticmethod

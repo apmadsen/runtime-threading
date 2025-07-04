@@ -5,7 +5,7 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      ProducerConsumerQueue
 
-# ProducerConsumerQueue
+# ProducerConsumerQueue[T]
 
 The `ProducerConsumerQueue` class is an implemention of the producer/consumer pattern,providing a queue on which work can be added and consumed asynchronously on different threads.
 

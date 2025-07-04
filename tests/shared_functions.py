@@ -87,10 +87,11 @@ def fn_continue_and_return_result_or_state_with_mods(task: Task[str], other_task
     else:
         return other_task.result + " " + str(x*y)
 
-def fn_acquire_signal_and_sleep(task: Task[Any], lock: Lock, acquired_event: Event, t_sleep: float) -> None:
+def fn_acquire_signal_and_sleep(task: Task[Any], lock: Lock, acquired_event: Event, released_event: Event, t_sleep: float) -> None:
     with lock:
         acquired_event.signal()
         task.interrupt.wait_event.wait(t_sleep)
+    released_event.signal()
 
 def fn_signal_after_time(task: Task[Any], signal: InterruptSignal, t_sleep: float) -> None:
     task.interrupt.wait_event.wait(t_sleep)

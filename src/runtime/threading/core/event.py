@@ -6,7 +6,7 @@ from signal import signal, SIGTERM, SIGINT
 from time import time
 
 from runtime.threading.core.lock import Lock
-from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVAL
+from runtime.threading.core.defaults import TASK_SUSPEND_AFTER, POLL_INTERVAL
 from runtime.threading.core.continuation import Continuation
 from runtime.threading.core.event_continuation import EventContinuation
 from runtime.threading.core.continue_when import ContinueWhen

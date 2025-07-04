@@ -8,6 +8,9 @@ from runtime.threading.core.semaphore import Semaphore
 from runtime.threading.core.helpers import acquire_or_fail, signal_after
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.defaults import (
+    DEFAULT_PARALLELISM, TASK_SUSPEND_AFTER, TASK_KEEP_ALIVE, POLL_INTERVAL
+)
 
 def sleep(time: float, /, interrupt: Interrupt | None = None) -> None:
     terminate_event.wait(time)
@@ -26,4 +29,8 @@ __all__ = [
     'acquire_or_fail',
     'signal_after',
     'sleep',
+    'DEFAULT_PARALLELISM',
+    'TASK_SUSPEND_AFTER',
+    'TASK_KEEP_ALIVE',
+    'POLL_INTERVAL',
 ]

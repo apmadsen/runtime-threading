@@ -5,7 +5,7 @@
     [tasks](/docs/0.0/runtime/threading/tasks/module.md) >
      Task
 
-# Task
+# Task[T]
 
 The `Task` class is an abstraction of a regular thread, and it represents an application task of work.
 
@@ -43,7 +43,7 @@ except InterruptException:
 - interrupt `Interrupt | None`: The external interrupt. Defaults to `None`.
 - lazy `bool`: Specifies whether or not the task may be run lazily when awaited. Defaults to False.
 
-Note: If task was created without, `Interrupt.none()` is used.
+Note: If task was created without an interrupt, `Interrupt.none()` is used.
 
 ## Properties
 

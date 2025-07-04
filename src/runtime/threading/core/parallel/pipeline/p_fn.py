@@ -27,7 +27,7 @@ class PFn(Generic[Tin, Tout]):
         """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Task[Iterable[Tout]], Tin]): The function to parallelize
+            fn (Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]): The function to parallelize
         """
         ...
     @overload
@@ -35,7 +35,7 @@ class PFn(Generic[Tin, Tout]):
         """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Task[Iterable[Tout]], Tin]): The function to parallelize
+            fn (Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]): The function to parallelize
             parallelism (int): An int between 1 and 32 representing the max no. of parallel threads.
         """
         ...
@@ -44,7 +44,7 @@ class PFn(Generic[Tin, Tout]):
         """Creates a new parallel function.
 
         Args:
-            fn (Callable[[Task[Iterable[Tout]], Tin]): The function to parallelize
+            fn (Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]): The function to parallelize
             parallelism (float): A float between 0.0 and 1.0 representing the no. of parallel threads relative to the max parallelism of the current PContext
         """
         ...

@@ -175,7 +175,7 @@ class ProducerConsumerQueue(Generic[T]):
                             # so we need to run iteration one more time just to make sure
 
                             if result := self.__queue.dequeue(0, interrupt = interrupt):
-                                return result
+                                return result # pragma: no cover
                             else:
                                 raise # pragma: no cover
 
@@ -183,7 +183,7 @@ class ProducerConsumerQueue(Generic[T]):
                         raise
                     finally:
                         self.__lock.release()
-                else:
+                else: # pragma: no cover
                     continue
 
                 if initial_timeout == 0 or not self.__notify_event.wait(timeout, interrupt):

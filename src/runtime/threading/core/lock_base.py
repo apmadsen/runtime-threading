@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from types import TracebackType
 from datetime import datetime
 
-from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVAL
+from runtime.threading.core.defaults import TASK_SUSPEND_AFTER, POLL_INTERVAL
 from runtime.threading.core.testing.debug import get_locks_debugger
 
 if TYPE_CHECKING: # pragma: no cover

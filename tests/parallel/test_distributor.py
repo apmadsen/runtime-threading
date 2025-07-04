@@ -70,7 +70,7 @@ def test_interruption(internals):
 # def test_stress_test():
 
 #     n = 100
-#     o = 100
+#     o = 1000
 #     p = 5
 #     items = [ i for i in range(o)]
 

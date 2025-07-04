@@ -5,7 +5,7 @@ from typingutils import get_type_name
 from threading import Thread
 
 from runtime.threading import Event, AutoClearEvent, InterruptSignal
-from runtime.threading.core.tasks.config import TASK_SUSPEND_AFTER, POLL_INTERVAL
+from runtime.threading.core.defaults import TASK_SUSPEND_AFTER, POLL_INTERVAL
 
 from tests.shared_functions import (
     fn_wait_for_event_and_set_another, fn_sleep_and_set_event

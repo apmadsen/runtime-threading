@@ -8,7 +8,7 @@ T = TypeVar("T")
 
 class PFilter(PFn[T, T]):
     """The PFilter class is an extension of the base PFn class which applies a filter to the work items.
-    The function is inclusiv, meaning is uses a predefined predicate function to select the items
+    The function is inclusive, meaning is uses a predefined predicate function to select the items
     it lets through.
     """
     __slots__ = ["__catch_all"]
@@ -23,7 +23,7 @@ class PFilter(PFn[T, T]):
         """Creates a new catch-all parallel filter function, i.e. one that doesn't filter out anything.
 
         Args:
-            parallelism (int): An int between 1 and 32 representing the max no. of parallel threads.
+            parallelism (int): A no. between 1 and 32 representing the max no. of parallel threads.
         """
         ...
     @overload
@@ -62,5 +62,6 @@ class PFilter(PFn[T, T]):
 
     @property
     def is_catch_all(self) -> bool:
-        """Indicates if filter it a simple catch-all filter."""
+        """Indicates if filter it a simple catch-all filter.
+        """
         return self.__catch_all # pragma: no cover

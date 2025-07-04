@@ -5,9 +5,9 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      Distributor
 
-# Distributor
+# Distributor[T]
 
-The Distributor class is used for processing a no. of items on multiple consumers simultaneously.
+The `Distributor` class is used for processing a no. of items on multiple consumers simultaneously.
 The items aren't divided amongst the consumers, but duplicated thus enabling multiple consumers to process the same work.
 
 ### Example

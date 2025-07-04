@@ -8,4 +8,4 @@
 
 # PipelineException : Exception
 
-The `ParallelException` exception is the base exception class for exceptions raised from the `runtime.threading.parallel.pipeline` module.
+The `PipelineException` exception is the base exception class for exceptions raised from the `runtime.threading.parallel.pipeline` module.

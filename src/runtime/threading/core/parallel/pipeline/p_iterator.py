@@ -11,6 +11,12 @@ class PIterator(Iterator[T], Protocol):
     """
 
     def next(self, timeout: float | None = None, interrupt: Interrupt | None = None) -> T:
+        """Gets the next item.
+
+        Args:
+            timeout (float | None, optional): The no. of seconds to wait before raising a StopIteration exception. Defaults to None.
+            interrupt (Interrupt | None, optional): An external interrupt used to cancel operation.. Defaults to None.
+        """
         ... # pragma: no cover
 
     def __next__(self) -> T:
