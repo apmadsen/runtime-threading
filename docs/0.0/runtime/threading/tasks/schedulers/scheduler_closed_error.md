@@ -6,6 +6,6 @@
      [schedulers](/docs/0.0/runtime/threading/tasks/module.md) >
       SchedulerClosedError
 
-# SchedulerClosedError : TaskException
+# SchedulerClosedError : [TaskException](../task_exception.md)
 
 The `SchedulerClosedError` exception is raised when trying to schedule a task on a closed scheduler.

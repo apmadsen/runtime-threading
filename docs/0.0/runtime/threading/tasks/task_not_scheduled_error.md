@@ -5,6 +5,6 @@
     [tasks](/docs/0.0/runtime/threading/tasks/module.md) >
      TaskNotScheduledError
 
-# TaskNotScheduledError : TaskException
+# TaskNotScheduledError : [TaskException](task_exception.md)
 
 The `TaskNotScheduledError` exception is raised when accessing the result of a task that is not scheduled, running or completed.

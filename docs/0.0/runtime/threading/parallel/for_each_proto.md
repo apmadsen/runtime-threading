@@ -11,7 +11,7 @@ The `ForEachProto` class is a wrapper used to create new for-each processes. The
 
 ## Constructors
 
-### \_\_init\_\_(items: _Iterable[T]_, task_name: _str | None_ = _None_, parallelism: _int | None_ = _None_, interrupt: _Interrupt | None_ = _None_, scheduler: _TaskScheduler | None_ = _None_)
+### \_\_init\_\_(items: _Iterable[T]_, task_name: _str | None_ = _None_, parallelism: _int | None_ = _None_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_, scheduler: _[TaskScheduler](../tasks/schedulers/task_scheduler.md) | None_ = _None_)
 
 - items `Iterable[T]`: The items to be processed.
 - task_name `str | None`: The task name prefix. Defaults to `None`.

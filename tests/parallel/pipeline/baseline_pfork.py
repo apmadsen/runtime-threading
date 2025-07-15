@@ -21,25 +21,25 @@ def baseline_pfork(parallelism: tuple[int, ...], count: int):
     facit = sorted(facit)
 
 
-    def fn0(task: Task[Iterable[int]], item: int) -> Iterable[int]:
+    def fn0(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
         yield item + 1
-    def fn1(task: Task[Iterable[float]], item: int) -> Iterable[float]:
+    def fn1(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
         yield item + 1000
-    def fn1_1(task: Task[Iterable[float]], item: float) -> Iterable[float]:
+    def fn1_1(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
         yield item + 500
-    def fn2(task: Task[Iterable[float]], item: int) -> Iterable[float]:
+    def fn2(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
         yield item + 2000
-    def fn3(task: Task[Iterable[float]], item: int) -> Iterable[float]:
+    def fn3(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
         yield item + 3000
-    def fn4(task: Task[Iterable[float]], item: float) -> Iterable[float]:
+    def fn4(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
         yield item + 10000
 
 
     for p in parallelism:
         pl = PFn(fn0, p) | [
-            PFilter[int](lambda o: o % 2 == 0) | PFn[int, float](fn1, p) | PFn(fn1_1, p),
-            PFilter[int](lambda o: o % 2 != 0 and o % 3 == 0) | PFn(fn2, p),
-            PFilter[int](lambda o: o % 2 != 0 and o % 3 != 0) | PFn(fn3, p)
+            PFilter[int|float](lambda t, o: o % 2 == 0) | PFn(fn1, p) | PFn(fn1_1, p),
+            PFilter[int|float](lambda t, o: o % 2 != 0 and o % 3 == 0) | PFn(fn2, p),
+            PFilter[int|float](lambda t, o: o % 2 != 0 and o % 3 != 0) | PFn(fn3, p)
         ] | PFn(fn4, p)
 
         with ConcurrentTaskScheduler(p) as scheduler:

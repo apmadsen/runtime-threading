@@ -172,7 +172,7 @@ class ProducerConsumerQueue(Generic[T]):
                     try:
                         if self.is_complete:
                             # if queue was completed in another thread, it may not be empty at this point,
-                            # so we need to run iteration one more time just to make sure
+                            # so we need to try to dequeue one more time just to make sure
 
                             if result := self.__queue.dequeue(0, interrupt = interrupt):
                                 return result # pragma: no cover

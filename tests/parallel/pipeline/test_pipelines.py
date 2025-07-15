@@ -1,8 +1,7 @@
 # pyright: basic
-from typing import Iterable, Any
-from datetime import datetime
+from typing import Iterable
 from pytest import raises as assert_raises, fixture
-from re import escape
+
 
 from runtime.threading import InterruptSignal, Interrupt, InterruptException
 from runtime.threading.tasks import Task, AggregateException, TaskException
@@ -16,7 +15,7 @@ from tests.parallel.pipeline.baseline_pfork import baseline_pfork
 
 def test_basics(internals):
     with PContext(4) as ctx:
-        def fn(task: Task[Iterable[float]], item: int) -> Iterable[float]:
+        def fn(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
             assert ctx.interrupt.propagates_to(task.interrupt)
             task.interrupt.raise_if_signaled()
             yield item * 1.5
@@ -72,4 +71,38 @@ def test_error_handling(internals):
     assert scheduler.allocated_threads == scheduler.suspended_threads == 0
 
 
+def test_example1(internals):
+    from runtime.threading.tasks import Task
+    from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
+    from runtime.threading.parallel.pipeline import PFn, PFilter, PContext
 
+    with ConcurrentTaskScheduler(4) as scheduler:
+        with PContext(scheduler.max_parallelism, scheduler = scheduler) as ctx:
+
+            def fn_filter_uneven(task: Task[Iterable[int|float]], item: int|float) -> bool:
+                return item % 2 == 0
+
+            def fn_multiply(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
+                task.interrupt.raise_if_signaled()
+                yield item * 1.5
+
+            def fn_divide(task: Task[Iterable[int|float]], item: int|float) -> Iterable[float]:
+                task.interrupt.raise_if_signaled()
+                yield item / 2
+
+            pipeline = (
+                PFilter(fn_filter_uneven) # filters out all uneven numbers bringing the workload down from 1000 to 500 items
+                  | PFn(fn_multiply) # multiplies by 1.5
+                  | [
+                      PFn(fn_divide), # divides by 2
+                      PFn(fn_divide) # divides by 2
+                    ] # the fork multiplies the workload with the no. of functions in it bringing the workload up from 500 to 1000
+            )
+
+            o = 1000
+            facit = [ ((i * 1.5) / 2) for i in range(o) if i % 2 == 0]
+            result = list(pipeline(range(o))) # -> 1000 items
+
+            assert set(facit) == set(result)
+
+            x=0

@@ -6,6 +6,6 @@
      [schedulers](/docs/0.0/runtime/threading/tasks/module.md) >
       TaskAlreadyStartedOrScheduledError
 
-# TaskAlreadyStartedOrScheduledError: TaskException
+# TaskAlreadyStartedOrScheduledError: [TaskException](../task_exception.md)
 
 The `TaskAlreadyStartedOrScheduledError` exception is raised when trying to schedule a task that is already running, or scheduled.

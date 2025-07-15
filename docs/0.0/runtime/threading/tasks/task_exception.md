@@ -5,6 +5,6 @@
     [tasks](/docs/0.0/runtime/threading/tasks/module.md) >
      TaskException
 
-# TaskException : Exception
+# TaskException : [ThreadingException](../threading_exception.md)
 
 The `TaskException` exception is the base exception class for exceptions raised from the `runtime.threading.tasks` module.

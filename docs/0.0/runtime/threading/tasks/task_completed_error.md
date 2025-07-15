@@ -5,6 +5,6 @@
     [tasks](/docs/0.0/runtime/threading/tasks/module.md) >
      TaskCompletedError
 
-# TaskCompletedError : TaskException
+# TaskCompletedError : [TaskException](task_exception.md)
 
 The `TaskCompletedError` exception is raised when scheduling a task that is already completed.

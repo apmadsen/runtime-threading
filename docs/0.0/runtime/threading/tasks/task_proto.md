@@ -11,7 +11,7 @@ The `TaskProto` class is a wrapper used to create new tasks. The intended use is
 
 ## Constructors
 
-### \_\_init\_\_(name: _str | None_ = _None_, interrupt: _Interrupt | None_ = _None_, scheduler: _TaskScheduler | None_ = _None_, lazy: _bool | None_ = _None_)
+### \_\_init\_\_(name: _str | None_ = _None_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_, scheduler: _[TaskScheduler](schedulers/task_scheduler.md) | None_ = _None_, lazy: _bool | None_ = _None_)
 
 Creates a `TaskProto` instance which can be used for creating tasks.
 

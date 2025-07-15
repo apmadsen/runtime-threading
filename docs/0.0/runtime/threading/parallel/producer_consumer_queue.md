@@ -60,7 +60,7 @@ Indicates if the queue is failed.
 
 Indicates if the queue is consuming from another `ProducerConsumerQueue`.
 
-### wait_event -> _Event_
+### wait_event -> _[Event](../event.md)_
 
 The internal event, signaled when items are added or when `complete()`, `fail()` or `fail_if_not_complete()` is called.
 
@@ -78,14 +78,14 @@ Adds multiple items to the queue.
 
 - items `_Iterable[T]_`: The items to be added.
 
-### take(timeout: _float | None_ = _0_, /, interrupt: _Interrupt | None_ = _None_) -> _T_
+### take(timeout: _float | None_ = _0_, /, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _T_
 
 Tries to take an item from the queue. If a timeout is specified, call will block until an item can be produced or timeout is met. Will raise a `TimeoutError` exception if no item can be produced and timeout is not `None`.
 
 - timeout `float`: The operation timeout. Defaults to `0`.
 - interrupt `Interrupt | None`: An Interrupt for this specific call. Defaults to `None`.
 
-### try_take(timeout: _float | None_ = _0_, /, interrupt: _Interrupt | None_ = _None_) -> _tuple[T | None, bool]_
+### try_take(timeout: _float | None_ = _0_, /, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _tuple[T | None, bool]_
 
 Tries to take an item from the queue. If a timeout is specified, call will block until an item can be produced or timeout is met.
 
@@ -110,6 +110,6 @@ If not completed, marks the queue failed with the specified exception. The queue
 
 - error `Exception`: The exception that caused the process to fail.
 
-### get_iterator() -> _PIterable[T]_
+### get_iterator() -> _[PIterable](../parallel/pipeline/p_iterable.md)[T]_
 
 Returns a `ProducerConsumerQueueIterator[T]` used for blocking interruptable iteration.

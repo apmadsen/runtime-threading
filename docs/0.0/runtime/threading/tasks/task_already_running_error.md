@@ -5,6 +5,6 @@
     [tasks](/docs/0.0/runtime/threading/tasks/module.md) >
      TaskAlreadyRunningError
 
-# TaskAlreadyRunningError : TaskException
+# TaskAlreadyRunningError : [TaskException](task_exception.md)
 
 The `TaskAlreadyRunningError` exception is raised when scheduling a task that is already running.

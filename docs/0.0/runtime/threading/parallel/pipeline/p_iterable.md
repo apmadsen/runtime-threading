@@ -18,7 +18,7 @@ It's used throughout the `runtime.threading.parallel.pipeline` module and implem
 
 Drains the `PIterable` from items.
 
-### drain(timeout: _float | None_ = _None_, interrupt: _Interrupt | None_ = _None_) -> _None_
+### drain(timeout: _float | None_ = _None_, interrupt: _[Interrupt](../../interrupt.md) | None_ = _None_) -> _None_
 
 Drains the `PIterable` from items.
 

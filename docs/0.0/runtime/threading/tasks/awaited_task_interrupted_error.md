@@ -5,6 +5,6 @@
     [tasks](/docs/0.0/runtime/threading/tasks/module.md) >
      AwaitedTaskInterruptedError
 
-# AwaitedTaskInterruptedError : TaskException
+# AwaitedTaskInterruptedError : [TaskException](task_exception.md)
 
 The `AwaitedTaskInterruptedError` exception is raised when one or more awaited tasks were interrupted (applies to `Task.wait_any()` and `Task.wait_all()`).

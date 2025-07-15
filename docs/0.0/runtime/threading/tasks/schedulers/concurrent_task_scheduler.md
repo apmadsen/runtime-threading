@@ -6,7 +6,7 @@
      [schedulers](/docs/0.0/runtime/threading/tasks/module.md) >
       ConcurrentTaskScheduler
 
-# ConcurrentTaskScheduler : TaskScheduler
+# ConcurrentTaskScheduler : [TaskScheduler](task_scheduler.md)
 
 The `ConcurrentTaskScheduler` class is a task scheduler for concurrent workloads, with a predefined max degree of parallelism.
 

@@ -4,6 +4,6 @@
    [threading](/docs/0.0/runtime/threading/module.md) >
     AutoClearEvent
 
-# AutoClearEvent : Event
+# AutoClearEvent : [Event](event.md)
 
 The `AutoClearEvent` class extends the base `Event` by automatically clearing after being awaited.

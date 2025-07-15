@@ -6,6 +6,6 @@
      [pipeline](/docs/0.0/runtime/threading/parallel/module.md) >
       PipelineException
 
-# PipelineException : Exception
+# PipelineException : [ThreadingException](../../threading_exception.md)
 
 The `PipelineException` exception is the base exception class for exceptions raised from the `runtime.threading.parallel.pipeline` module.

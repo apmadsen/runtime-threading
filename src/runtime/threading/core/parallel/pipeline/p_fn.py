@@ -10,9 +10,9 @@ from runtime.threading.core.parallel.producer_consumer_queue import ProducerCons
 from runtime.threading.core.parallel.pipeline.p_context import PContext
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 
-Tin = TypeVar("Tin", covariant=True)
-Tout = TypeVar("Tout", covariant=True)
-Tnext = TypeVar("Tnext", covariant=True)
+Tin = TypeVar("Tin")
+Tout = TypeVar("Tout")
+Tnext = TypeVar("Tnext")
 
 class PFn(Generic[Tin, Tout]):
     """The PFn class (short for Parallel Function) is the heart of the parallel pipelines. It uses
@@ -95,7 +95,7 @@ class PFn(Generic[Tin, Tout]):
 
     def _convert_next(
         self,
-        next: PFn[Tout, Tnext] | Sequence[PFn[Tout, Tnext]] | Callable[[Tout], bool]
+        next: PFn[Tout, Tnext] | Sequence[PFn[Tout, Tnext]] | Callable[[Task[Iterable[Tout]], Tout], bool]
     ) -> PFn[Tout, Tnext]:
         if isinstance(next, collections.abc.Sequence):
             from runtime.threading.core.parallel.pipeline.p_fork import PFork
@@ -113,11 +113,11 @@ class PFn(Generic[Tin, Tout]):
     def __or__(self, next: Sequence[PFn[Tout, Tnext]]) -> PFn[Tin, Tnext]:
         ...
     @overload
-    def __or__(self, next: Callable[[Tout], bool]) -> PFn[Tin, Tout]:
+    def __or__(self, next: Callable[[Task[Iterable[Tout]],Tout], bool]) -> PFn[Tin, Tout]:
         ...
     def __or__(
         self,
-        next: PFn[Tout, Tnext] | Sequence[PFn[Tout, Tnext]] | Callable[[Tout], bool]
+        next: PFn[Tout, Tnext] | Sequence[PFn[Tout, Tnext]] | Callable[[Task[Iterable[Tout]], Tout], bool]
     ) -> PFn[Tin, Tnext]:
         next = self._convert_next(next)
         next._parent = self
@@ -139,11 +139,11 @@ class NullPFn(PFn[Any, Any]):
     def __or__(self, next: Sequence[PFn[Tin, Tout]]) -> PFn[Tin, Tout]:
         ...
     @overload
-    def __or__(self, next: Callable[[Tout], bool]) -> PFn[Tout, Tout]:
+    def __or__(self, next: Callable[[Task[Iterable[Tout]],Tout], bool]) -> PFn[Tout, Tout]:
         ...
     def __or__(
         self,
-        next: PFn[Tin, Tout] | Sequence[PFn[Tin, Tout]] | Callable[[Tout], bool]
+        next: PFn[Tin, Tout] | Sequence[PFn[Tin, Tout]] | Callable[[Task[Iterable[Tout]],Tout], bool]
     ) -> PFn[Tin, Tout]:
         return self._convert_next(next)
 

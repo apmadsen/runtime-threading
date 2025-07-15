@@ -6,7 +6,7 @@
      [schedulers](/docs/0.0/runtime/threading/tasks/module.md) >
       TaskScheduler
 
-# TaskScheduler : Abstract
+# TaskScheduler
 
 The TaskScheduler class is the base task scheduler class responsible for managing the threads used by all derived schedulers.
 
@@ -38,19 +38,19 @@ Returns the default task scheduler (a ConcurrentTaskScheduler instance).
 
 Returns the task scheduler of the currently running task, or the default task scheduler if not called from within a running task.
 
-### current_task() -> _Task[Any] | None_
+### current_task() -> _[Task](../task.md)[Any] | None_
 
 Returns the currently running task, if called from within one.
 
 ## Functions
 
-### queue(task: _Task[Any]_) -> _None_
+### queue(task: _[Task](../task.md)[Any]_) -> _None_
 
 Abstract. Queues the specified task.
 
 - task `Task[Any]`: The task to queue.
 
-### prioritise(task: _Task[Any]_) -> _None_
+### prioritise(task: _[Task](../task.md)[Any]_) -> _None_
 
 Abstract. Runs the task inline of another. For internal use.
 

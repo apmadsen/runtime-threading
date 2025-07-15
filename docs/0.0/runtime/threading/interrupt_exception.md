@@ -4,7 +4,7 @@
    [threading](/docs/0.0/runtime/threading/module.md) >
     InterruptException
 
-# InterruptException : ThreadingException
+# InterruptException : [ThreadingException](threading_exception.md)
 
 The `InterruptException` exception is raised whenever raise_if_signaled() is called on a signaled `Interrupt`.
 

@@ -18,7 +18,7 @@ from tests.parallel.pipeline.baseline_pfork import baseline_pfork
 def test_pfilter(internals):
     queue1 = ProducerConsumerQueue[int]([ i for i in range(1000) ])
 
-    def filter(item: int) -> bool:
+    def filter(task: Task[Iterable[int]], item: int) -> bool:
         return item % 2 == 0
     def fn(task: Task[Iterable[int]], item: int) -> Iterable[int]:
         yield item * 2

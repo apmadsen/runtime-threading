@@ -43,12 +43,12 @@ Creates a new `Distributor` instance over the specified iterable.
 
 - items `Iterable[T]`: The items to distribute.
 
-## Functions start(interrupt: _Interrupt | None_ = _None_) -> _Task[None]_
+## Functions start(interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _Task[None]_
 
 Seals distributor and begins distributing. Returns a task which can be used to await the operation.
 
 - interrupt `Interrupt | None` = An external interrupt used to stop the distribution. Defaults to `None`.
 
-## take() -> _PIterable[T]_
+## take() -> _[PIterable](pipeline/p_iterable.md)[T]_
 
 Adds a consumer to the distributor instance. Note that any work already done by other consumers, will be lost at this point, so it's better to add all consumers before adding any work.

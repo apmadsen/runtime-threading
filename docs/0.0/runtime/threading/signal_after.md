@@ -4,7 +4,7 @@
    [threading](/docs/0.0/runtime/threading/module.md) >
     signal_after
 
-# signal_after(signal: _InterruptSignal_, time: _float_) -> _None_
+# signal_after(signal: _[InterruptSignal](interrupt_signal.md)_, time: _float_) -> _None_
 
 The `signal_after` function creates a task which signals an InterruptSignal instance after a certain  amount of time (seconds).
 

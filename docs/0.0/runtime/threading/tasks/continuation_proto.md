@@ -11,7 +11,7 @@ The `ContinuationProto` class is a wrapper used to create task continuations. Th
 
 ## Constructors
 
-### \_\_init\_\_(tasks: _Sequence[Task[Any]]_, when: _ContinueWhen_, /, options: _ContinuationOptions_ = _ContinuationOptions.ON_COMPLETED_SUCCESSFULLY_ ,name: _str | None_ = _None_, interrupt: _Interrupt | None_ = _None_)
+### \_\_init\_\_(tasks: _Sequence[Task[Any]]_, when: _[ContinueWhen](../continuation_when.md)_, /, options: _[ContinuationOptions](continuation_options.md)_ = _ContinuationOptions.ON_COMPLETED_SUCCESSFULLY_, name: _str | None_ = _None_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_)
 
 Creates a `ContinuationProto` instance which can be used for creating task continuations.
 

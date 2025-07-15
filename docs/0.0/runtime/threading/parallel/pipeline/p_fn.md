@@ -12,20 +12,20 @@ The `PFn` class (short for Parallel Function) is the heart of the parallel pipel
 
 ## Constructors
 
-### __init__(self, fn: _Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]]_)
+### __init__(self, fn: _Callable[[[Task](../../tasks/task.md)[Iterable[Tout]], Tin], Iterable[Tout]]_)
 
 Creates a new parallel function.
 
 - fn `(Task[Iterable[Tout], Tin) -> Iterable[Tout]`: The target function to parallelize.
 
-### __init__(self, fn: _Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]]_, parallelism: _int_)
+### __init__(self, fn: _Callable[[[Task](../../tasks/task.md)[Iterable[Tout]], Tin], Iterable[Tout]]_, parallelism: _int_)
 
 Creates a new parallel function.
 
 - fn `(Task[Iterable[Tout], Tin) -> Iterable[Tout]`: The target function to parallelize.
 - parallelism `int`: A no between 1 and 32 representing the max no. of parallel threads.
 
-### __init__(self, fn: _Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]]_, parallelism: _float_)
+### __init__(self, fn: _Callable[[[Task](../../tasks/task.md)[Iterable[Tout]], Tin], Iterable[Tout]]_, parallelism: _float_)
 
 Creates a new parallel function.
 

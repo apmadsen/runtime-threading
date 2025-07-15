@@ -33,7 +33,7 @@ assert task.is_interrupted
 
 Creates a new `InterruptSignal`.
 
-### \_\_init\_\_(*linked_interrupts: _Interrupt_)
+### \_\_init\_\_(*linked_interrupts: _[Interrupt](interrupt.md)_)
 
 Creates a new `InterruptSignal` linked to one or more other interrupts.
 
@@ -41,7 +41,7 @@ Creates a new `InterruptSignal` linked to one or more other interrupts.
 
 ## Properties
 
-### interrupt -> _Interrupt_
+### interrupt -> _[Interrupt](interrupt.md)_
 
 The associated `Interrupt` which will be signaled by calling `signal()` on this instance.
 

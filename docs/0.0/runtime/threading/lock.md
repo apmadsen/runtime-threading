@@ -4,7 +4,7 @@
    [threading](/docs/0.0/runtime/threading/module.md) >
     Lock
 
-# Lock : LockBase
+# Lock : [LockBase](lock_base.md)
 
 The `Lock` class limits concurrent access to objects by only allowing one single thread to acquire and hold it at any given time.
 

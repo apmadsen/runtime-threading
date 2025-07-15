@@ -16,7 +16,7 @@ The `LockBase` class is the base class of locks (`Lock` and `Semaphore`).
 
 ## Functions
 
-### acquire(timeout: _float_, interrupt: _Interrupt | None_ = _None_) -> _bool_
+### acquire(timeout: _float_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_) -> _bool_
 
 Acquires the lock.
 

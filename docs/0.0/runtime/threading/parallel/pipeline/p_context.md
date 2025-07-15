@@ -18,7 +18,7 @@ Creates a new parallel context.
 
 - max_parallelism `int`: The maximum no. of parallel threads.
 
-### \_\_init\_\_(max_parallelism: _int_, /, interrupt: _Interrupt | None_ = _None_, scheduler: _TaskScheduler | None_ = _None_)
+### \_\_init\_\_(max_parallelism: _int_, /, interrupt: _[Interrupt](../../interrupt.md) | None_ = _None_, scheduler: _[TaskScheduler](../../tasks/schedulers/task_scheduler.md) | None_ = _None_)
 
 Creates a new parallel context.
 
@@ -36,11 +36,11 @@ The ID of the PContext instance.
 
 The max degree of parallelism a parallel operation should use.
 
-### scheduler -> _ TaskScheduler_
+### scheduler -> _ [TaskScheduler](../../tasks/schedulers/task_scheduler.md)_
 
 The scheduler for internal tasks.
 
-# interrupt -> _ Interrupt_
+# interrupt -> _ [Interrupt](../../interrupt.md)_
 
 The external Interrupt used to interrupt a parallel operation.
 

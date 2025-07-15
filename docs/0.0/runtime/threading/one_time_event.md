@@ -4,6 +4,6 @@
    [threading](/docs/0.0/runtime/threading/module.md) >
     OneTimeEvent
 
-# OneTimeEvent : Event
+# OneTimeEvent : [Event](event.md)
 
 The `OneTimeEvent` class extends the base `Event` by prohibiting clearing after signaling, thus the name.

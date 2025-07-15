@@ -5,13 +5,13 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      distribute
 
-# distribute(items: _Iterable[T]_) -> _Distributor[T]_
+# distribute(items: _Iterable[T]_) -> _[Distributor](distributor.md[T]_
 
 Creates a `Distributor` instance which is used to distribute a sequence of items into several consumers.
 
 - items `Iterable[T]`: The items to distribute.
 
-# distribute(items: _Iterable[T]_, scheduler: _TaskScheduler_) -> _Distributor[T]_
+# distribute(items: _Iterable[T]_, scheduler: _[TaskScheduler](../tasks/schedulers/task_scheduler.md)_) -> _[Distributor](distributor.md[[T]_
 
 Creates a `Distributor` instance which is used to distribute a sequence of items into several consumers.
 

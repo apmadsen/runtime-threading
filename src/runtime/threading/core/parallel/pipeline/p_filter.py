@@ -27,25 +27,25 @@ class PFilter(PFn[T, T]):
         """
         ...
     @overload
-    def __init__(self, fn: Callable[[T], bool]) -> None:
+    def __init__(self, fn: Callable[[Task[Iterable[T]], T], bool]) -> None:
         """Creates a new parallel filter function with a predicate function for selecting the
         work items it lets through.
 
         Args:
-            fn (Callable[[T], bool]): The predicate function used to to determine which items to let through.
+            fn (Callable[[Task[Iterable[T]], T], bool]): The predicate function used to to determine which items to let through.
         """
         ...
     @overload
-    def __init__(self, fn: Callable[[T], bool], *, parallelism: int) -> None:
+    def __init__(self, fn: Callable[[Task[Iterable[T]], T], bool], *, parallelism: int) -> None:
         """Creates a new parallel filter function with a predicate function for selecting the
         work items it lets through.
 
         Args:
-            fn (Callable[[T], bool]): The The predicate function used to to determine which items to let through.
+            fn (Callable[[Task[Iterable[T]], T], bool]): The The predicate function used to to determine which items to let through.
             parallelism (int): An int between 1 and 32 representing the max no. of parallel threads.
         """
         ...
-    def __init__(self, fn: Callable[[T], bool] | None = None, *, parallelism: int | float = 2):
+    def __init__(self, fn: Callable[[Task[Iterable[T]], T], bool] | None = None, *, parallelism: int | float = 2):
         self.__catch_all = not fn
         def filter_fn(task: Task[Iterable[T]], item: T) -> Iterable[T]:
             if not fn:
@@ -53,7 +53,7 @@ class PFilter(PFn[T, T]):
             else:
                 org_task_name = task.name
                 task.name = get_function_name(fn)
-                if fn(item):
+                if fn(task, item):
                     yield item
                 task.name = org_task_name
 

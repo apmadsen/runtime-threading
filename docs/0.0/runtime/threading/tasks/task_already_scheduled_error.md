@@ -5,6 +5,6 @@
     [tasks](/docs/0.0/runtime/threading/tasks/module.md) >
      TaskAlreadyScheduledError
 
-# TaskAlreadyScheduledError : TaskException
+# TaskAlreadyScheduledError : [TaskException](task_exception.md)
 
 The `TaskAlreadyScheduledError` exception is raised when scheduling a task that is already scheduled.

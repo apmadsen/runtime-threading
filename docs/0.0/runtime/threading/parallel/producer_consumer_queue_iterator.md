@@ -5,13 +5,13 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      ProducerConsumerQueueIterator
 
-# ProducerConsumerQueueIterator[T] : PIterator[T]
+# ProducerConsumerQueueIterator[T] : [PIterator](../parallel/pipeline/p_iterator.md)[T]
 
 The `ProducerConsumerQueueIterator` class is used to create an iterator over a `ProducerConsumerQueue` instance. Under normal use it acts like a normal iterator, but when used through the various functions and classes in the `runtime.threading.parallel` module, it supports timeout and interrupts when calling `next()`.
 
 ## Constructors
 
-### \_\_init\_\_(queue: _ProducerConsumerQueue[T]_)
+### \_\_init\_\_(queue: _[ProducerConsumerQueue](producer_consumer_queue.md)[T]_)
 
 Creates a new `ProducerConsumerQueueIterator` instance linked to the specified `ProducerConsumerQueue`.
 
@@ -19,7 +19,7 @@ Creates a new `ProducerConsumerQueueIterator` instance linked to the specified `
 
 ## Functions
 
-### next(timeout: _float | None_ = _None_, interrupt: _Interrupt | None_ = _None_) -> _T_:
+### next(timeout: _float | None_ = _None_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _T_:
 
 Takes an item from the linked `ProducerConsumerQueue`.
 

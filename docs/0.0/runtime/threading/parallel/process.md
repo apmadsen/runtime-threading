@@ -5,7 +5,7 @@
     [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
      process
 
-# process(items: _Iterable[Tin]_, /, task_name: _str | None_ = _None_, parallelism: _int | None_ = _None_, interrupt: _Interrupt | None_ = _None_, scheduler: _TaskScheduler | None_ = _None_) -> _ProcessProto[Tin]_
+# process(items: _Iterable[Tin]_, /, task_name: _str | None_ = _None_, parallelism: _int | None_ = _None_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_, scheduler: _[TaskScheduler](../tasks/schedulers/task_scheduler.md) | None_ = _None_) -> _[ProcessProto](process_proto.md)[Tin]_
 
 The `process` function inititates a parallel process of multiple items and returns a `ProcessProto` wrapper.
 

@@ -25,11 +25,11 @@ Adds an item to the end of the queue.
 
 Adds an item to the beginning of the queue. This is used in cases when a consumer is unsuccessful processing an item, and that item should be processed asap by another.
 
-### try_dequeue(self, timeout: _float | None_ = _None_, interrupt: _Interrupt | None_ = _None_) -> _tuple[T | None, bool]_
+### try_dequeue(self, timeout: _float | None_ = _None_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _tuple[T | None, bool]_
 
 Tries to dequeue an item. If queue is empty or a timeout occurs, a default value or 'None, False' is returned.
 
-### dequeue(self, timeout: _float | None_ = _None_, interrupt: _Interrupt | None_ = _None_) -> _tuple[T | None, bool]_
+### dequeue(self, timeout: _float | None_ = _None_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _tuple[T | None, bool]_
 
 Dequeues an item. If queue is empty, operation waits for an item to be added.
 
