@@ -36,7 +36,7 @@ except InterruptException:
 
 > Instead of using the constructer directly, use the functions `Task.Create()`, `Task.Plan()` and `Task.Run()` instead.
 
-### \_\_init\_\_(fn: _Callable[[Task[T]], T]_, name: _str | None_ = _None_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_, lazy: _bool_ = _False_)
+### \_\_init\_\_(fn: _Callable[[Task[T]], T]_, name: _str | None_ = _None_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_, lazy: _bool_ = _False_)
 
 - fn `(task: [Task[T]) -> T`: The function which will be called to do the work.
 - name `str | None`: The name of the task (and the underlying thread). Defaults to `None`.
@@ -95,7 +95,7 @@ Indicates if the task is running.
 
 Indicates if task is lazy. If it is, task will be scheduled automatically when awaited, or when property `Task.result` is accessed.
 
-### interrupt -> _[Interrupt](interrupt.md)_
+### interrupt -> _[Interrupt](../interrupt.md)_
 
 The task interrupt. Note: If task was created without, `Interrupt.none()` is used.
 
@@ -127,7 +127,7 @@ Queues the task on the specified scheduler. If scheduler is omitted or None, the
 
 Runs the task synchronously.
 
-### wait(timeout: _float | None_, interrupt: _[Interrupt](interrupt.md) | None_) -> _bool_
+### wait(timeout: _float | None_, interrupt: _[Interrupt](../interrupt.md) | None_) -> _bool_
 
 Waits for the task to complete. If task has not been scheduled and is lazy, it will be run automatically.
 
@@ -168,7 +168,7 @@ result2 = task2.result # -> 138.1068
 
 ## Static functions
 
-### wait_any(tasks: _Sequence[Task[Any]]_, timeout: _float | None_ = _None_, /,fail_on_interrupt: _bool_ = _False_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_) -> _bool_
+### wait_any(tasks: _Sequence[Task[Any]]_, timeout: _float | None_ = _None_, /,fail_on_interrupt: _bool_ = _False_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _bool_
 
 Waits for any of the specified tasks to complete. Returns true when any of the tasks completed. Otherwise False.
 
@@ -177,7 +177,7 @@ Waits for any of the specified tasks to complete. Returns true when any of the t
 - fail_on_interrupt `bool`: Raise an `AwaitedTaskInterruptedError` if any of the tasks was interrupted.
 - interrupt `Interrupt | None`: An Interrupt for this specific call. Defaults to `None`.
 
-### wait_all(tasks: _Sequence[Task[Any]]_, timeout: _float | None_ = _None_, /,fail_on_interrupt: _bool_ = _False_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_) -> _bool_
+### wait_all(tasks: _Sequence[Task[Any]]_, timeout: _float | None_ = _None_, /,fail_on_interrupt: _bool_ = _False_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _bool_
 
 Waits for all of the specified tasks to complete. Returns true if all of the tasks completed. Otherwise False.
 
@@ -186,7 +186,7 @@ Waits for all of the specified tasks to complete. Returns true if all of the tas
 - fail_on_interrupt `bool`: Raise an `AwaitedTaskInterruptedError` if any of the tasks was interrupted.
 - interrupt `Interrupt | None`: An Interrupt for this specific call. Defaults to `None`.
 
-### with_any(tasks: _Sequence[Task[Any]]_, /, options: _[ContinuationOptions](continuation_options.md)_ = _ContinuationOptions.ON_COMPLETED_SUCCESSFULLY_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_) -> _ContinuationProto_
+### with_any(tasks: _Sequence[Task[Any]]_, /, options: _[ContinuationOptions](continuation_options.md)_ = _ContinuationOptions.ON_COMPLETED_SUCCESSFULLY_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _ContinuationProto_
 
 Initiates the creation of a new continuation which is run when any of the specified tasks are completed. Returns a `ContinuationProto` wrapper.
 
@@ -194,7 +194,7 @@ Initiates the creation of a new continuation which is run when any of the specif
 - options `ContinuationOptions`: Specifies when and how continuation is run. Defaults to `ON_COMPLETED_SUCCESSFULLY`
 - interrupt `Interrupt | None`: An Interrupt for this specific call. Defaults to `None`.
 
-### with_all(tasks: _Sequence[Task[Any]]_, /, options: _[ContinuationOptions](continuation_options.md)_ = _ContinuationOptions.ON_COMPLETED_SUCCESSFULLY_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_) -> _ContinuationProto_
+### with_all(tasks: _Sequence[Task[Any]]_, /, options: _[ContinuationOptions](continuation_options.md)_ = _ContinuationOptions.ON_COMPLETED_SUCCESSFULLY_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_) -> _ContinuationProto_
 
 Initiates the creation of a new continuation which is run when all of the specified tasks are completed. Returns a `ContinuationProto` wrapper.
 
@@ -224,7 +224,7 @@ task = Task.with_all(tasks, ContinuationOptions.DEFAULT).run(fn_continue)
 result = task.result # -> 885.3
 ```
 
-### create(*, name: _str | None_ = _None_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_, scheduler: _[TaskScheduler](schedulers/task_scheduler.md) | None_ = _None_, lazy: _bool_ = _False_) -> _TaskProto_
+### create(*, name: _str | None_ = _None_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_, scheduler: _[TaskScheduler](schedulers/task_scheduler.md) | None_ = _None_, lazy: _bool_ = _False_) -> _TaskProto_
 
 Initiates the creation of a new Task. Returns a `TaskProto` wrapper.
 
