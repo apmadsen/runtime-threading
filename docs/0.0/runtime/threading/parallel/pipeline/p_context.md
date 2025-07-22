@@ -32,6 +32,10 @@ Creates a new parallel context.
 
 The ID of the PContext instance.
 
+### closed -> _bool_
+
+Returns True when PContext has been closed/exited.
+
 ### max_parallelism -> _int_
 
 The max degree of parallelism a parallel operation should use.
