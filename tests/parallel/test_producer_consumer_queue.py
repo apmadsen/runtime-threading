@@ -1,4 +1,5 @@
 # pyright: basic
+# ruff: noqa
 from typing import List, Any, Iterable, cast
 from threading import Thread
 from re import escape

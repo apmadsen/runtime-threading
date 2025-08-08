@@ -1,4 +1,5 @@
 # pyright: basic
+# ruff: noqa
 from pytest import raises as assert_raises, fixture
 
 def test_example_1():

@@ -1,4 +1,5 @@
 # pyright: basic
+# ruff: noqa
 from pytest import raises as assert_raises, fixture
 from typing import cast
 from threading import Lock as TLock
