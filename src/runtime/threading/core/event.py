@@ -256,7 +256,8 @@ class Event:
                     else:
                         pass
 
-        self._after_wait()
+        if expedited: # only trigger after_wait if any continuations were expedited
+            self._after_wait()
 
 
     def _after_wait(self):
