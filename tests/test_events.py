@@ -1,11 +1,14 @@
 # pyright: basic
+# ruff: noqa
 from pytest import raises as assert_raises, fixture
 from time import sleep
 from typingutils import get_type_name
 from threading import Thread
 
-from runtime.threading import Event, AutoClearEvent, InterruptSignal
+from runtime.threading import Event, AutoClearEvent, InterruptSignal, Interrupt
 from runtime.threading.core.defaults import TASK_SUSPEND_AFTER, POLL_INTERVAL
+from runtime.threading.core.event_continuation import EventContinuation
+from runtime.threading.core.continue_when import ContinueWhen
 
 from tests.shared_functions import (
     fn_wait_for_event_and_set_another, fn_sleep_and_set_event
@@ -99,4 +102,31 @@ def test_auto_clear_event():
     # assert ev2.is_signaled # ev1 will propagate first
     # ev2.wait()
     assert not ev2.is_signaled
+
+
+
+def test_multiple_auto_clear_events():
+    ev1 = AutoClearEvent()
+    ev2 = AutoClearEvent()
+
+    combined_event = Event(purpose = "CONTINUATION")
+
+    Event._add_continuation(
+        (ev1, ev2),
+        EventContinuation(
+            ContinueWhen.ALL,
+            (ev1, ev2),
+            combined_event,
+            Interrupt.none()
+        )
+    )
+
+    ev1.signal()
+    assert ev1.is_signaled # because only one event was signaled, the continuation isn't expedited
+
+    ev2.signal() # now the continuation is expedited
+    assert not ev1.is_signaled
+    assert not ev2.is_signaled
+
+    x=0
 

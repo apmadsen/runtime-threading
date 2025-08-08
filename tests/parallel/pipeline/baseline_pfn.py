@@ -1,4 +1,5 @@
 # pyright: basic
+# ruff: noqa
 from typing import Iterable, List
 from datetime import datetime
 from pytest import raises as assert_raises, fixture

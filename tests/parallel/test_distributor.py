@@ -1,4 +1,5 @@
 # pyright: basic
+# ruff: noqa
 from typing import Iterable, Any, List
 from time import sleep
 from random import randint

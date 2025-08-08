@@ -1,4 +1,5 @@
 # pyright: basic
+# ruff: noqa
 from os import getenv
 from gc import collect
 from typing import Any, cast

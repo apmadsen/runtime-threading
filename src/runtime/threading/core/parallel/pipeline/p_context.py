@@ -44,7 +44,7 @@ class PContext():
     interrupts and schedulers to parallel pipelines.
     """
 
-    __slots__ = [ "__id", "__max_parallelism", "__scheduler", "__interrupt_signal" ]
+    __slots__ = [ "__id", "__max_parallelism", "__scheduler", "__interrupt_signal", "__closed" ]
     __current__id__: ClassVar[int] = 0
 
     @overload
@@ -83,6 +83,7 @@ class PContext():
             self.__id = PContext.__current__id__
             PContext.__current__id__ += 1
 
+        self.__closed = False
         self.__max_parallelism = max_parallelism
         self.__scheduler = scheduler or TaskScheduler.default()
         self.__interrupt_signal = InterruptSignal(interrupt) if interrupt is not None else InterruptSignal()
@@ -98,6 +99,12 @@ class PContext():
         """The max degree of parallelism a parallel operation should use.
         """
         return self.__max_parallelism
+
+    @property
+    def closed(self) -> bool:
+        """Returns True when PContext has been closed/exited.
+        """
+        return self.__closed
 
     @property
     def scheduler(self) -> TaskScheduler:
@@ -149,6 +156,7 @@ class PContext():
         with LOCK:
             self.__interrupt_signal.signal() # make sure that any ongoing work is interrupted
 
+            self.__closed = True
             del self.__scheduler
             del self.__interrupt_signal
 

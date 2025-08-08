@@ -1,4 +1,5 @@
 # pyright: basic
+# ruff: noqa
 from pytest import raises as assert_raises, fixture
 from typing import Any, Iterable, Sequence, TypeVar
 from typingutils import get_type_name

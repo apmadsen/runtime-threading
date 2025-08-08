@@ -1,6 +1,6 @@
 # pyright: basic
+# ruff: noqa
 from typing import Any, Sequence
-# from time import sleep
 
 from runtime.threading.tasks import Task, TaskState
 from runtime.threading.tasks.schedulers import TaskScheduler

@@ -11,7 +11,7 @@ This project provides a task based abstraction to threading.
 ## Example
 
 ```python
-from runtime.threading import InterruptSignal
+from runtime.threading import InterruptSignal, InterruptException
 from runtime.threading.tasks import Task, ContinuationOptions
 
 try:
@@ -40,7 +40,7 @@ try:
      result3 = task3.result # TaskInterruptedException
 
 except InterruptException:
-     pass
+     pass # won't happen since the interrupt is never signaled
 ```
 ## Full documentation
 

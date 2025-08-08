@@ -419,21 +419,23 @@ class Task(Generic[T]):
         """Runs the task synchronously.
         """
 
+        current_scheduler = TaskScheduler.current()
+
         with self.__lock:
             if self.__state >= TaskState.COMPLETED:
                 raise TaskCompletedError
             elif self.__state >= TaskState.RUNNING:
                 raise TaskAlreadyRunningError
-            elif self.__scheduler != None and self.__scheduler != TaskScheduler.current():
+            elif self.__scheduler != None and self.__scheduler is not current_scheduler:
                 raise TaskAlreadyScheduledError # pragma: no cover
 
             if self.__scheduler == None:
-                self.__scheduler = TaskScheduler.current()
+                self.__scheduler = current_scheduler
 
             self.__transition_to(TaskState.RUNNING)
 
         try:
-            if self.__pctx and TaskScheduler.current() is self.__pctx.scheduler and PContext._register(self.__pctx): # pyright: ignore[reportPrivateUsage]
+            if self.__pctx and not self.__pctx.closed and current_scheduler is self.__pctx.scheduler and PContext._register(self.__pctx): # pyright: ignore[reportPrivateUsage]
                 pass
             else:
                 self.__pctx = None
@@ -462,6 +464,7 @@ class Task(Generic[T]):
             if self.__pctx:
                 PContext._unregister(self.__pctx) # pyright: ignore[reportPrivateUsage]
                 self.__pctx = None
+
             self.__internal_event.signal()
 
     def wait(
