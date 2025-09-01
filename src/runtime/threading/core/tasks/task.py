@@ -408,7 +408,7 @@ class Task(Generic[T]):
             elif self.__state >= TaskState.RUNNING:
                 raise TaskAlreadyRunningError # pragma: no cover
 
-            if scheduler == None:
+            if scheduler is None:
                 scheduler = TaskScheduler.current()
 
             self.__scheduler = scheduler
@@ -426,10 +426,10 @@ class Task(Generic[T]):
                 raise TaskCompletedError
             elif self.__state >= TaskState.RUNNING:
                 raise TaskAlreadyRunningError
-            elif self.__scheduler != None and self.__scheduler is not current_scheduler:
+            elif self.__scheduler is not None and self.__scheduler is not current_scheduler:
                 raise TaskAlreadyScheduledError # pragma: no cover
 
-            if self.__scheduler == None:
+            if self.__scheduler is None:
                 self.__scheduler = current_scheduler
 
             self.__transition_to(TaskState.RUNNING)

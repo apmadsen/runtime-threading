@@ -278,12 +278,12 @@ class Event:
                 # while awaiting events in Windows - to work around this, the waiting is done in 100ms intervals.
                 start_time = time()
                 while True:
-                    wait = min(POLL_INTERVAL, max(0, timeout-(time()-start_time))) if timeout != None else POLL_INTERVAL
+                    wait = min(POLL_INTERVAL, max(0, timeout-(time()-start_time))) if timeout is not None else POLL_INTERVAL
                     if event.wait(wait):
                         return True
-                    elif timeout != None and (time()-start_time) >= timeout:
+                    elif timeout is not None and (time()-start_time) >= timeout:
                         return False
-            elif timeout != None and timeout <= TASK_SUSPEND_AFTER:
+            elif timeout is not None and timeout <= TASK_SUSPEND_AFTER:
                 return event.wait(timeout)
             else:
                 if event.wait(TASK_SUSPEND_AFTER):

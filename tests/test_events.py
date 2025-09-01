@@ -128,5 +128,4 @@ def test_multiple_auto_clear_events():
     assert not ev1.is_signaled
     assert not ev2.is_signaled
 
-    x=0
 
