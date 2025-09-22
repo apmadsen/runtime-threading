@@ -84,16 +84,18 @@ def test_example_5():
     from runtime.threading.tasks import Task
     from runtime.threading import parallel
 
+    p = 5
     queue = parallel.ProducerConsumerQueue[int]()
     items = [ i for i in range(100)]
-    facit = sum(map(lambda x: x*2, items))
+    facit = sum(map(lambda x: x*2, items)) * p
 
     def fn(task: Task[None], items: list[int]) -> None:
         for item in items:
             queue.put(item * 2)
-        queue.complete()
 
-    parallel.background(parallelism=5).do(fn, items)
+    parallel.background(parallelism = p).do(fn, items).wait()
+
+    queue.complete()
 
     result = sum(item for item in queue.get_iterator())
 
