@@ -54,7 +54,7 @@ class LockBase:
             if interrupt is not None:
                 interrupt.raise_if_signaled()
 
-            if timeout != None and timeout <= TASK_SUSPEND_AFTER:
+            if timeout is not None and timeout <= TASK_SUSPEND_AFTER:
                 return self.__internal_lock.acquire(True, timeout)
             else:
                 if self.__internal_lock.acquire(True, TASK_SUSPEND_AFTER):

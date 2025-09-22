@@ -87,7 +87,7 @@ def fn_concurrent_queue(task: Task[list[int]], queue: Queue[int], interrupt: Int
     results: list[int] = []
     while True:
         result, success = queue.try_dequeue(0.01, interrupt=task.interrupt)
-        if success and result != None:
+        if success and result is not None:
             results.append(result)
         elif interrupt.is_signaled:
             break
