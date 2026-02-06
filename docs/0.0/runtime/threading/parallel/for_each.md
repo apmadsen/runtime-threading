@@ -1,8 +1,8 @@
-[Documentation](/docs/documentation.md) >
- [v0.0](/docs/0.0/version.md) >
-  [runtime](/docs/0.0/runtime/module.md) >
-   [threading](/docs/0.0/runtime/threading/module.md) >
-    [parallel](/docs/0.0/runtime/threading/parallel/module.md) >
+[Documentation](../../../../documentation.md) >
+ [v0.0](../../../version.md) >
+  [runtime](../../module.md) >
+   [threading](../module.md) >
+    [parallel](module.md) >
      for_each
 
 # for_each(items: _Iterable[T]_, /, task_name: _str | None_ = _None_, parallelism: _int | None_ = _None_, interrupt: _[Interrupt](../interrupt.md) | None_ = _None_, scheduler: _[TaskScheduler](../tasks/schedulers/task_scheduler.md) | None_ = _None_) -> _[ForEachProto](for_each_proto.md)[T]_

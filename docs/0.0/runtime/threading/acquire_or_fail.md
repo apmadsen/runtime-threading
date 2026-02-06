@@ -1,7 +1,7 @@
-[Documentation](/docs/documentation.md) >
- [v0.0](/docs/0.0/version.md) >
-  [runtime](/docs/0.0/runtime/module.md) >
-   [threading](/docs/0.0/runtime/threading/module.md) >
+[Documentation](../../../documentation.md) >
+ [v0.0](../../version.md) >
+  [runtime](../module.md) >
+   [threading](module.md) >
     acquire_or_fail
 
 # acquire_or_fail(lock: _[Lock](lock.md) | [Semaphore](semaphore.md)_, timeout: _float_, fail: _Callable[[], Exception]_, interrupt: _[Interrupt](interrupt.md) | None_ = _None_) -> _ContextManager[None]_

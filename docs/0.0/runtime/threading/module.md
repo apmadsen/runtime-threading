@@ -1,6 +1,6 @@
-[Documentation](/docs/documentation.md) >
- [v0.0](/docs/0.0/version.md) >
-  [runtime](/docs/0.0/runtime/module.md) >
+[Documentation](../../../documentation.md) >
+ [v0.0](../../version.md) >
+  [runtime](../module.md) >
    threading
 
 # runtime.threading module
