@@ -32,3 +32,6 @@
 ### [TaskProto](task_proto.md)
 ### [TaskState](task_state.md)
 
+## Decorators
+
+### [task](task_function.md)

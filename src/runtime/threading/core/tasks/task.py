@@ -21,6 +21,7 @@ from runtime.threading.core.tasks.helpers import get_function_name
 from runtime.threading.core.parallel.pipeline.p_context import PContext
 
 P = ParamSpec("P")
+R = TypeVar("R")
 T = TypeVar("T")
 Tresult = TypeVar("Tresult")
 Tcontinuation = TypeVar("Tcontinuation")
@@ -85,7 +86,7 @@ class TaskProto:
         if self.__scheduler:
             raise ThreadingException("Future tasks cannot have scheduler specified") # pragma: no cover
 
-        return Task[T](fn_wrap, self.__name, self.__interrupt, self.__lazy)
+        return Task[T](fn_wrap, self.__name or get_function_name(fn), self.__interrupt, self.__lazy)
 
     def run(
         self,
@@ -108,7 +109,7 @@ class TaskProto:
             if ( pc := PContext.current() ) and pc is not PContext.root():
                 self.__scheduler = pc.scheduler
 
-        task = Task[T](fn_wrap, self.__name, self.__interrupt, self.__lazy)
+        task = Task[T](fn_wrap, self.__name or get_function_name(fn), self.__interrupt, self.__lazy)
         task.schedule(self.__scheduler or TaskScheduler.current())
         return task
 
@@ -785,3 +786,21 @@ class CompletedTask(Task[T]):
 
         super().__init__(empty_target)
 
+
+def task(fn: Callable[P, R]) -> Callable[P, Task[R]]:
+    """Wraps a function inside a task.
+
+    Args:
+        fn (Callable[P, R]): The target function.
+
+    Returns:
+        Callable[P, Task[R]]: Returns a function which will start and return the task.
+    """
+    def wrapper(task: Task[Any], *args: P.args, **kwargs: P.kwargs) -> R:
+        task.interrupt.raise_if_signaled()
+        return fn(*args, **kwargs)
+
+    def create_task(*args: P.args, **kwargs: P.kwargs) -> Task[R]:
+        return Task[R].run(wrapper, *args, **kwargs)
+
+    return create_task

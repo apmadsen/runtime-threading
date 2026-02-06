@@ -4,6 +4,7 @@ from runtime.threading.core.event import Event, terminate_event
 from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.auto_clear_event import AutoClearEvent
 from runtime.threading.core.lock import Lock
+from runtime.threading.core.synclock import synclock
 from runtime.threading.core.semaphore import Semaphore
 from runtime.threading.core.helpers import acquire_or_fail, signal_after
 from runtime.threading.core.interrupt_signal import InterruptSignal
@@ -21,6 +22,7 @@ __all__ = [
     'OneTimeEvent',
     'AutoClearEvent',
     'Lock',
+    'synclock',
     'Semaphore',
     'ThreadingException',
     'InterruptSignal',

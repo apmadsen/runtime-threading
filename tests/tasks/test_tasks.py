@@ -8,7 +8,7 @@ from re import escape
 from runtime.threading.tasks import (
     Task, ContinuationOptions, schedulers, AggregateException, TaskState, TaskException,
     TaskCompletedError, TaskNotScheduledError, TaskAlreadyRunningError, TaskAlreadyScheduledError,
-    AwaitedTaskInterruptedError
+    AwaitedTaskInterruptedError, task
 )
 from runtime.threading.tasks.schedulers import TaskScheduler, ConcurrentTaskScheduler
 from runtime.threading import InterruptSignal, Interrupt, InterruptException, Event, sleep
@@ -282,3 +282,15 @@ def test_run_after(internals):
         t1 = Task.create(scheduler=scheduler).run_after(0.01, fn_return_value_after_time, 0, "test")
         assert t1.result == "test"
 
+def test_task_decorator():
+
+    @task
+    def sync_function(x: int) -> int:
+        return x * 2
+
+    task1 = sync_function(2) # -> Task[int]
+    task2 = sync_function(2) # -> Task[int]
+
+    assert task1.wait()
+    assert task2.wait()
+    assert task1 is not task2

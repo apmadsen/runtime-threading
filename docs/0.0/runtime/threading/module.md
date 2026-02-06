@@ -31,3 +31,7 @@
 ### [signal_after](signal_after.md)
 ### [sleep](sleep.md)
 ### [terminate_event](terminate_event.md)
+
+## Decorators
+
+### [synclock](synclock.md)

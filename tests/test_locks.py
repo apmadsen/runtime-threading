@@ -1,12 +1,15 @@
 # pyright: basic
 # ruff: noqa
 from pytest import raises as assert_raises, fixture
-from typing import cast
+from typing import Any, cast
 from threading import Lock as TLock
 
 from runtime.threading.core.defaults import TASK_SUSPEND_AFTER
 from runtime.threading.tasks import Task
-from runtime.threading import InterruptSignal, Event, Interrupt, AutoClearEvent, InterruptException, Lock, Semaphore, acquire_or_fail, sleep
+from runtime.threading import (
+    InterruptSignal, Event, Interrupt, AutoClearEvent, InterruptException,
+    Lock, Semaphore, acquire_or_fail, sleep, synclock
+)
 
 from tests.shared_functions import (
     fn_acquire_signal_and_sleep, fn_signal_after_time
@@ -125,4 +128,66 @@ def test_acquire_or_fail(internals):
     released_event.wait()
     assert not int_lock.locked()
     assert acquire_or_fail(l1, 0, lambda: Exception("Fail"))
+
+def test_synclock_decorator():
+    with assert_raises(Exception, match="Cannot apply synclock to a function twice"):
+        @synclock
+        @synclock
+        def sync_function(self) -> int:
+            return 1
+
+    def sync_function(self) -> int:
+        return 1
+
+    assert synclock(sync_function) is synclock(sync_function)
+
+
+    event1 = Event()
+    class AsyncTask:
+
+        @synclock("group1")
+        def sync_function1(self) -> int:
+            event1.wait()
+            return 2 * 2
+
+        @synclock("group1")
+        def sync_function2(self) -> int:
+            return 2 * 4
+
+        @synclock
+        def sync_function3(self) -> int:
+            return 2 * 8
+
+    def run_func1(task: Task[Any], inst: AsyncTask) -> int:
+        return inst.sync_function1()
+
+    def run_func2(task: Task[Any], inst: AsyncTask) -> int:
+        return inst.sync_function2()
+
+    def run_func3(task: Task[Any], inst: AsyncTask) -> int:
+        return inst.sync_function3()
+
+    inst = AsyncTask()
+    t1 = Task.run(run_func1, inst)
+    t2 = Task.run(run_func1, inst)
+    assert not t1.wait(0.1)
+    assert not t2.wait(0.1)
+    event1.signal()
+    assert t1.wait(0.1)
+    assert t2.wait(0.1)
+
+    event1.clear()
+
+    t3 = Task.run(run_func2, inst)
+    assert t3.wait()
+
+    t4 = Task.run(run_func1, inst)
+    t5 = Task.run(run_func2, inst)
+    t6 = Task.run(run_func3, inst)
+    assert t6.wait()
+    assert not t4.wait(0.1)
+    assert not t5.wait(0.1)
+    event1.signal()
+    assert t4.wait()
+    assert t5.wait()
 
