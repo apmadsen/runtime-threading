@@ -4,8 +4,8 @@ from pytest import raises as assert_raises, fixture
 from datetime import datetime
 from typing import Any, List
 
-from runtime.threading import ThreadingException, InterruptSignal, sleep
-from runtime.threading.tasks import Task
+from runtime.threading import ThreadingException, InterruptSignal, Event, sleep
+from runtime.threading.tasks import Task, AggregateException
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler
 
 from tests.shared_functions import (
@@ -87,3 +87,57 @@ def test_unqueue(internals):
 
         assert t1.is_completed
         assert t2.is_completed
+
+
+def test_closing_scheduler(internals):
+    ev_start_task2 = Event()
+    ev_start_task1 = Event()
+    ev_task1_done = Event()
+    events: list[Event] = []
+    main_task: Task[Any] | None
+    w_tasks: list[Task[Any]] = []
+
+    def task1(task: Task[int]) -> int:
+        ev_start_task1.wait()
+        try:
+            raise Exception()
+        finally:
+            ev_task1_done.signal()
+
+    def task2(task: Task[int], p: Task[int]) -> int:
+        ev_start_task2.wait()
+        return p.result
+
+    def task_w(task: Task[int], p: Task[int], e: Event) -> int:
+        e.signal()
+        return p.result
+
+
+    with ConcurrentTaskScheduler(10) as ts:
+        main_task = Task.run(task1)
+        t2 = Task.run(task2, main_task)
+
+        tasks = [main_task, t2]
+
+        for i in range(5):
+            ev = Event()
+            t = Task.create(name = f"task_w_{i}").run(task_w, t2, ev)
+            tasks.append(t)
+            w_tasks.append(t)
+
+            events.append(ev)
+
+        Event.wait_all(events)
+
+        ts.close()
+        ev_start_task1.signal()
+
+
+    try:
+        ev_start_task2.signal()
+        Task.wait_all(tasks)
+    except AggregateException as ex:
+        assert main_task.is_failed
+
+        for t in w_tasks:
+            assert t.is_failed

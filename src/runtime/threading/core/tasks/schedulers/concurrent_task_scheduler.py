@@ -1,10 +1,9 @@
 from __future__ import annotations
-from typing import Any, MutableSequence, Callable, ContextManager, cast
+from typing import Any, Callable, ContextManager, cast
 from types import TracebackType
 from threading import Thread, Event as TEvent, current_thread
 from contextlib import nullcontext
 
-from runtime.threading.core.interrupt_exception import InterruptException
 from runtime.threading.core.threading_exception import ThreadingException
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler, TaskAlreadyStartedOrScheduledError, SchedulerClosedError
 from runtime.threading.core.tasks.task import Task
@@ -12,7 +11,7 @@ from runtime.threading.core.tasks.task_state import TaskState
 from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.concurrent.queue import Queue
 from runtime.threading.core.interrupt_signal import InterruptSignal
-from runtime.threading.core.defaults import TASK_KEEP_ALIVE, DEFAULT_PARALLELISM
+from runtime.threading.core.defaults import TASK_KEEP_ALIVE, DEFAULT_PARALLELISM, POLL_INTERVAL
 
 
 class ConcurrentTaskScheduler(TaskScheduler):
@@ -42,9 +41,9 @@ class ConcurrentTaskScheduler(TaskScheduler):
         self.__max_parallelism = max_parallelism
         self.__keep_alive = keep_alive
         self.__queue: Queue[Task[Any] | TEvent] = Queue()
-        self.__threads: MutableSequence[Thread] = []
-        self.__active_threads: MutableSequence[Thread] = []
-        self.__suspended_threads: MutableSequence[Thread] = []
+        self.__threads: list[Thread] = []
+        self.__active_threads: list[Thread] = []
+        self.__suspended_threads: list[Thread] = []
         self.__close = InterruptSignal()
         self.__closed: OneTimeEvent | None = None
 
@@ -164,7 +163,12 @@ class ConcurrentTaskScheduler(TaskScheduler):
                             new_thread = Thread(target=self.__run, args=(None,), name="ConcurrentTaskScheduler.Resume-Thread")
                             new_thread.start()
 
-                    event.wait()
+                    while not event.wait(POLL_INTERVAL):
+                        # python core event may in some edge cases never be called in cases
+                        # where scheduler is closed prior to completing all its tasks, so it's
+                        # necessary to poll the event and check if close interrupt is signaled
+                        # as a precaution
+                        self.__close.interrupt.raise_if_signaled() # pragma: no cover
 
                     task.name = org_name
                     self._refresh_task()
@@ -206,13 +210,13 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
     def __run(self, task: Task[Any] | TEvent | None) -> None:
         thread = current_thread()
+        keep_alive = True # keep current thread alive i.e. poll for tasks
+
         try:
             with self.synchronization_lock:
                 if thread not in self.__active_threads:
                     self.__active_threads.append(thread)
                 self._register()
-
-            keep_alive = True
 
             while keep_alive:
                 try:
@@ -231,30 +235,26 @@ class ConcurrentTaskScheduler(TaskScheduler):
                                     keep_alive = False
                                     break
 
-                            task = self.__queue.dequeue(timeout = self.__keep_alive, interrupt = self.__close.interrupt)
+                            task = self.__queue.dequeue(timeout = self.__keep_alive)
 
-                except (TimeoutError, InterruptException) as ex:
-                    if isinstance(ex, InterruptException) and ex.interrupt != self.__close.interrupt:
-                        raise # pragma: no cover
-
+                except TimeoutError:
                     try:
-                        task = self.__queue.dequeue(timeout = self.__keep_alive, interrupt = self.__close.interrupt)
-                    except (TimeoutError, InterruptException):
-                        if isinstance(ex, InterruptException) and ex.interrupt != self.__close.interrupt:
-                            raise # pragma: no cover
-
+                        task = self.__queue.dequeue(timeout = self.__keep_alive)
+                    except TimeoutError:
                         with self.synchronization_lock:
-                            self.__active_threads.remove(thread)
+                            if thread in self.__active_threads:
+                                self.__active_threads.remove(thread)
+                            else:
+                                pass # pragma: no cover
 
                         keep_alive = False
 
         finally:
             with self.synchronization_lock:
                 self._unregister()
-                if self.__closed is not None and len(self.__threads) == 0 and len(self.__suspended_threads) == 0:
-                    self.__closed.signal()
-
-
+                if self.__closed is not None:
+                    if len(self.__threads) == 0 and len(self.__suspended_threads) == 0:
+                        self.__closed.signal()
 
     def _register(self) -> None:
         """Registers the current thread on the task scheduler.
