@@ -126,7 +126,7 @@ class Queue(Iterable[T]):
                 return cast(T, result)
             elif timeout is None or ( timeout > 0 and self.__notify_event.wait(timeout, interrupt) ):
                 if interrupt is not None:
-                    interrupt.raise_if_signaled()
+                    interrupt.raise_if_signaled() # pragma no cover
             else:
                 raise TimeoutError
 

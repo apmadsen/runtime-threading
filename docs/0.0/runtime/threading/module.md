@@ -1,6 +1,6 @@
-[Documentation](/docs/documentation.md) >
- [v0.0](/docs/0.0/version.md) >
-  [runtime](/docs/0.0/runtime/module.md) >
+[Documentation](../../../documentation.md) >
+ [v0.0](../../version.md) >
+  [runtime](../module.md) >
    threading
 
 # runtime.threading module
@@ -31,3 +31,7 @@
 ### [signal_after](signal_after.md)
 ### [sleep](sleep.md)
 ### [terminate_event](terminate_event.md)
+
+## Decorators
+
+### [synclock](synclock.md)
