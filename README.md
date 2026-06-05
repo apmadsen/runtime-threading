@@ -45,7 +45,15 @@ This library is useful when building:
 
 👉 Especially valuable when concurrency becomes more than just "run this in a thread".
 
+## ⚖️ Trade-offs
+| Focus ✅ | Not a goal ❌ |
+|---|---|
+|Task abstraction|Full async framework replacement|
+|Simplicity|Handling every edge-case in concurrency|
+|Composability|Low-level thread control|
 
+👉 The goal is not to replace Python’s concurrency primitives —
+but to make them easier to use correctly.
 
 ## ⚙️ Example
 
