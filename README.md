@@ -7,53 +7,165 @@
 
 # Runtime Threading
 
-A high-level task abstraction layer for Python — designed to make concurrency easier to reason about.
+A high-level task abstraction layer for Python — designed to make concurrency easier to reason about and structure.
 
 ## 🚀 Why this exists
 
-Concurrency in Python is powerful — but often difficult to structure:
+Concurrency in Python is powerful, but quickly becomes difficult to manage as systems grow:
 
-- Threads, locks, and events quickly become hard to coordinate
-- Async and threading models are not always intuitive to combine
-- Simple tasks grow into complex orchestration problems
+- Coordination between tasks becomes complex
+- Threads, locks, and events introduce implicit behavior
+- Control flow becomes harder to follow
+- Simple parallel work evolves into orchestration problems
 
-👉 This library focuses on one thing:
-Making concurrent code **composable, predictable, and easier to work with**
+👉 The core challenge is not execution — it's coordination.
 
+This project introduces a **structured task abstraction** that makes concurrent systems easier to design, understand, and evolve.
 
 
 ## ✨ Features
 
-- 🧵 Run background tasks and await completion or failure
-- 🔗 Coordinate multiple tasks, locks, and events
+- 🧵 High-level task abstraction over threading primitives
+- 🔗 Coordination between tasks, locks, and events
 - 📦 Built-in support for producer/consumer patterns
-- ⚡ Simplified parallel operations like map and foreach
-- 🔄 Continuation-based task chaining
+- ⚡ Simplified parallel operations
+- 🔄 Continuation-based workflows
 - 🧠 Structured task orchestration
-
 
 
 ## 📦 Use cases
 
-This library is useful when building:
+This library is particularly useful when building:
 
 - Data pipelines
-- Background workers / job systems
-- Concurrent processing workflows
-- Event-driven systems
-- Services that require coordination between multiple tasks
+- Background processing systems
+- Job orchestration workflows
+- Event-driven architectures
+- Services with coordinated parallel workloads
 
-👉 Especially valuable when concurrency becomes more than just "run this in a thread".
+👉 Especially valuable when concurrency becomes part of the system design — not just an implementation detail.
+
+
+## 🧵 Core idea
+
+Instead of working directly with low-level primitives such as threads or synchronization objects,
+this library introduces a **Task abstraction** as the central unit of execution.
+
+A task:
+
+- Represents a complete unit of work
+- Has a well-defined lifecycle
+- Can be composed with other tasks
+- Provides consistent handling of success and failure
+
+👉 This enables reasoning about concurrency at a higher level.
+
+
+## 🔄 Composability & orchestration
+
+One of the key goals of this project is to make concurrent workflows composable:
+
+- Multiple tasks can be coordinated as a group
+- Execution flow can be expressed declaratively
+- Dependencies between tasks become explicit
+
+👉 This shifts concurrency from *control flow complexity* to *structured orchestration*.
+
+
+## 📦 Producer / Consumer patterns
+
+The library includes support for queue-based processing patterns:
+
+- Decouples producers from consumers
+- Enables scalable work distribution
+- Simplifies pipeline-style architectures
+
+👉 A common building block in data and backend systems.
+
+
+## 🏗 Design philosophy
+
+This project is built on a few key principles:
+
+### 1. Abstraction over primitives
+Low-level threading constructs are powerful but difficult to scale in complexity.
+
+### 2. Composability over ad-hoc concurrency
+Tasks should be easy to combine, coordinate, and reuse.
+
+### 3. Predictability over flexibility
+Clear execution flow is prioritized over complex edge-case handling.
+
+### 4. Developer experience
+Concurrency should be understandable — not something developers avoid.
+
+
+## 🔗 What this enables
+
+By introducing structured task orchestration, this library allows you to:
+
+- Build clearer concurrent architectures
+- Reduce coordination complexity
+- Improve readability of parallel workflows
+- Make systems easier to debug and maintain
+
+👉 Particularly useful in systems where concurrency is a core concern.
+
 
 ## ⚖️ Trade-offs
-| Focus ✅ | Not a goal ❌ |
-|---|---|
-|Task abstraction|Full async framework replacement|
-|Simplicity|Handling every edge-case in concurrency|
-|Composability|Low-level thread control|
 
-👉 The goal is not to replace Python’s concurrency primitives —
-but to make them easier to use correctly.
+| Focus ✅ | Not a goal ❌ |
+|---------|--------------|
+| Task abstraction | Full async framework replacement |
+| Structured orchestration | Fine-grained thread control |
+| Composability | Covering every concurrency edge case |
+
+👉 The goal is not to replace Python’s concurrency model —
+but to make it **more usable in real-world systems**.
+
+
+## 🧠 Inspiration
+
+Inspired by:
+
+- Task-based programming models (e.g. C# Task Parallel Library)
+- Real-world concurrency challenges in backend systems
+- The need for more structured abstractions in Python
+
+
+## 🎯 When to use
+
+Use this library if you:
+
+- Work with non-trivial concurrency
+- Need to coordinate multiple operations
+- Want clearer structure in parallel workflows
+- Prefer higher-level abstractions over low-level control
+
+
+## 🚫 When not to use
+
+This library may not be necessary if:
+
+- Your concurrency needs are very simple
+- Direct use of threading or async is sufficient
+- You require fine-grained control over execution primitives
+
+
+## 🔗 Related projects
+
+Part of a broader focus on:
+
+- Runtime abstractions
+- Clean architecture
+- Developer tooling in Python
+
+👉 https://github.com/apmadsen
+
+
+## 🤝 Contributing
+
+Feedback and contributions are welcome!
 
 ## ⚙️ Example
 
