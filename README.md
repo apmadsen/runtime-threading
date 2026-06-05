@@ -5,10 +5,49 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/runtime-threading)
 [![PyPI Downloads](https://static.pepy.tech/badge/runtime-threading/week)](https://pepy.tech/projects/runtime-threading)
 
-# runtime-threading
-This project provides a task based abstraction to threading.
+# Runtime Threading
 
-## Example
+A high-level task abstraction layer for Python — designed to make concurrency easier to reason about.
+
+## 🚀 Why this exists
+
+Concurrency in Python is powerful — but often difficult to structure:
+
+- Threads, locks, and events quickly become hard to coordinate
+- Async and threading models are not always intuitive to combine
+- Simple tasks grow into complex orchestration problems
+
+👉 This library focuses on one thing:
+Making concurrent code **composable, predictable, and easier to work with**
+
+
+
+## ✨ Features
+
+- 🧵 Run background tasks and await completion or failure
+- 🔗 Coordinate multiple tasks, locks, and events
+- 📦 Built-in support for producer/consumer patterns
+- ⚡ Simplified parallel operations like map and foreach
+- 🔄 Continuation-based task chaining
+- 🧠 Structured task orchestration
+
+
+
+## 📦 Use cases
+
+This library is useful when building:
+
+- Data pipelines
+- Background workers / job systems
+- Concurrent processing workflows
+- Event-driven systems
+- Services that require coordination between multiple tasks
+
+👉 Especially valuable when concurrency becomes more than just "run this in a thread".
+
+
+
+## ⚙️ Example
 
 ```python
 from runtime.threading import InterruptSignal, InterruptException
