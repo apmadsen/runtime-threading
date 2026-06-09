@@ -221,6 +221,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
             while keep_alive:
                 try:
                     while True:
+                        do_break = False
                         try:
                             if isinstance(task, Task):
                                 super()._run(cast(Task[Any], task))
@@ -233,9 +234,13 @@ class ConcurrentTaskScheduler(TaskScheduler):
                                 if len(self.__active_threads) > self.__max_parallelism:
                                     self.__active_threads.remove(thread)
                                     keep_alive = False
-                                    break
+                                    do_break = True
 
-                            task = self.__queue.dequeue(timeout = self.__keep_alive)
+                            if not do_break:
+                                task = self.__queue.dequeue(timeout = self.__keep_alive)
+
+                        if do_break:
+                            break
 
                 except TimeoutError:
                     try:
