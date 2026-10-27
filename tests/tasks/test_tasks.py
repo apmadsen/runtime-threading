@@ -17,7 +17,7 @@ from tests.shared_functions import (
     fn_return_parent_task, fn_return_task, fn_wait_for_signal, fn_schedule_task_after_time,
     fn_wait_for_task_after_time, fn_raise_unrelated_signal, fn_fail_immediately, fn_raise_interrupt,
     fn_get_first_result_from_tasks, fn_get_count_of_tasks, fn_sleep_if_not_interrupted,
-    fn_fail_after_time, fn_return_value_after_time, fn_raise_interrupt_after_time,
+    fn_fail_after_time, fn_return_value_after_time, fn_raise_interrupt_after_time, fn_void_continuation,
     fn_continue_and_return_result_or_state, fn_continue_and_return_result_or_state_with_mods
 )
 
@@ -164,6 +164,8 @@ def test_continuations(internals):
     # might not react as fast as the test requires
 
     with ConcurrentTaskScheduler(8) as scheduler:
+
+
         test_str = "test"
         t1 = Task.plan(fn_return_value_after_time, 0.005, test_str)
         t2 = t1.continue_with(ContinuationOptions.DEFAULT, fn_continue_and_return_result_or_state)
@@ -194,7 +196,6 @@ def test_continuations(internals):
         t8.schedule(scheduler)
         t9.schedule(scheduler)
         Task.wait_all([t10, t11])
-
 
         assert t10.result in ("Task 8 done", "Task 9 done")
         assert t11.result == "Task 8 done"
@@ -250,6 +251,13 @@ def test_continuations(internals):
         assert Task.wait_any([
             Task.create(scheduler=scheduler).run(fn_return_value_after_time, 0.01, "Task 121 done"),
         ])
+
+
+        t1.wait()
+        t14 = t1.continue_with(ContinuationOptions.DEFAULT, fn_void_continuation)
+        assert t14.is_completed_successfully
+        x=0
+
 
 
 def test_lazy_task(internals):
