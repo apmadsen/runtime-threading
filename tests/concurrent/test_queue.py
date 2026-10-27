@@ -1,4 +1,5 @@
 # pyright: basic
+# ruff: noqa
 from typing import Iterable, Any, cast
 
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler

@@ -12,19 +12,20 @@ from runtime.threading.parallel import ProducerConsumerQueue
 from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler, TaskScheduler
 
 
-
 def test_pfork(internals):
+    p = 2
+    n = 100
     with ConcurrentTaskScheduler(8) as scheduler:
         with PContext(scheduler.max_parallelism, scheduler=scheduler):
-            items = [ i for i in range(1000) ]
+            items = [ i for i in range(n) ]
 
             # call without a parent - not the intended way to use PFork
-            f1 = PFork[int, int](( PFn(fn, 2), ))
+            f1 = PFork[int, int](tuple(( PFn(fn, 2) for _ in range(p))))
 
-            facit = [ i * 2 for i in items ]
-            result = f1(items)
+            facit = sorted([ i * 2 for i in items ] * p)
+            result = sorted(f1(items))
 
-            assert sorted(result) == facit
+            assert result == facit
 
 def test_interruption(internals):
     items = [ i for i in range(1000) ]
