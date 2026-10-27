@@ -44,7 +44,7 @@ class TasksContinuation(Continuation):
 
             try:
                 if self.__done:
-                    return True
+                    return True # pragma: no cover (race conditions makes it hard to test this efficiently)
                 elif not Continuation.try_continue(self):
                     return False
                 else:

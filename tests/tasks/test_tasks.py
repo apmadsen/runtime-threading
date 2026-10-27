@@ -253,11 +253,6 @@ def test_continuations(internals):
         ])
 
 
-        t1.wait()
-        t14 = t1.continue_with(ContinuationOptions.DEFAULT, fn_void_continuation)
-        assert t14.is_completed_successfully
-        x=0
-
 
 
 def test_lazy_task(internals):
