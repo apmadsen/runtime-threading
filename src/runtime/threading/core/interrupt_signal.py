@@ -2,6 +2,7 @@ from typing import overload
 
 from runtime.threading.core.interrupt import Interrupt
 
+
 class InterruptSignal:
     """The InterruptSignal class is used to interrupt tasks asynchronously
     by signaling an underlying Interrupt instance.
@@ -13,7 +14,6 @@ class InterruptSignal:
     def __init__(self) -> None:
         """Creates a new InterruptSignal.
         """
-        ...
     @overload
     def __init__(self, *linked_interrupts: Interrupt) -> None:
         """Creates a new InterruptSignal linked to one or more other interrupts.

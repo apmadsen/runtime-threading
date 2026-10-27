@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from inspect import stack
 from os import path
-from typing import Callable
 
 TESTING_DIR = path.dirname(__file__)
 

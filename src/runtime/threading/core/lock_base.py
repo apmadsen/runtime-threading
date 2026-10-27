@@ -1,10 +1,12 @@
 from __future__ import annotations
-from threading import RLock, Lock as TLock, Semaphore
-from typing import TYPE_CHECKING
-from types import TracebackType
-from datetime import datetime
 
-from runtime.threading.core.defaults import TASK_SUSPEND_AFTER, POLL_INTERVAL
+from datetime import datetime
+from threading import Lock as TLock
+from threading import RLock, Semaphore
+from types import TracebackType
+from typing import TYPE_CHECKING
+
+from runtime.threading.core.defaults import POLL_INTERVAL, TASK_SUSPEND_AFTER
 from runtime.threading.core.testing.debug import get_locks_debugger
 
 if TYPE_CHECKING: # pragma: no cover
@@ -62,7 +64,9 @@ class LockBase:
                 elif timeout:
                     timeout -= TASK_SUSPEND_AFTER
 
-            from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+            from runtime.threading.core.tasks.schedulers.task_scheduler import (
+                TaskScheduler,
+            )
             with TaskScheduler.current().suspend():
                 if interrupt is not None:
                     while not interrupt.is_signaled:

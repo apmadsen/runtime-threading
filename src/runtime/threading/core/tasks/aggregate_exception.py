@@ -1,6 +1,7 @@
-from typing import Iterable, Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 from runtime.threading.core.threading_exception import ThreadingException
+
 
 class AggregateException(ThreadingException):
     """The AggregateException exception is raised from operations awaiting results of several tasks.

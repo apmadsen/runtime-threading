@@ -1,12 +1,15 @@
 from __future__ import annotations
+
+from threading import Event as TEvent
+from threading import Lock as TLock
+from threading import RLock, Semaphore
 from typing import TYPE_CHECKING
-from threading import Lock as TLock, RLock, Semaphore, Event as TEvent
 
 from runtime.threading.core.testing.reflection import get_referrer
 
 if TYPE_CHECKING:
-    from runtime.threading.core.event import Event
     from runtime.threading.core.continuation import Continuation
+    from runtime.threading.core.event import Event
 
 DEBUGGING = False
 EVENTS_DEBUGGER: EventsDebugger | None = None
@@ -47,9 +50,9 @@ class EventsDebugger: # pragma: no cover
     def register_continuation(self, event: Event, continuation: Continuation):
         referrer = get_referrer(__file__)
         with self.__lock_continuations:
-            setattr(continuation, "__referrer__", referrer)
+            continuation.__referrer__ = referrer
             if not event in self.__continuations:
-                self.__continuations[event] = set((continuation,))
+                self.__continuations[event] = {continuation}
             else:
                 self.__continuations[event].add(continuation)
 

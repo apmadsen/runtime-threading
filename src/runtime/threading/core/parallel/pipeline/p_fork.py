@@ -1,15 +1,18 @@
+from collections.abc import Iterable, MutableSequence, Sequence
 from math import ceil
-from typing import TypeVar, Sequence, MutableSequence, Iterable, Any, cast
+from typing import Any, TypeVar, cast
 
-from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
+from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.parallel.pipeline.p_context import PContext
 from runtime.threading.core.parallel.pipeline.p_fn import PFn
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
-from runtime.threading.core.tasks.task import Task
-from runtime.threading.core.tasks.continuation_options import ContinuationOptions
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
+from runtime.threading.core.parallel.producer_consumer_queue import (
+    ProducerConsumerQueue,
+)
 from runtime.threading.core.tasks.aggregate_exception import AggregateException
-from runtime.threading.core.interrupt_signal import InterruptSignal
-from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.tasks.continuation_options import ContinuationOptions
+from runtime.threading.core.tasks.task import Task
 
 Tin = TypeVar("Tin")
 Tout = TypeVar("Tout")
@@ -18,7 +21,7 @@ class PFork(PFn[Tin, Tout]):
     """The PFork class is an extension of the base PFn class which forks out the same work items to a number
     of parallel functions simultaneously.
     """
-    __slots__ = ["__fns", "__tasks", "__queue_out", "__queues"]
+    __slots__ = ["__fns", "__queue_out", "__queues", "__tasks"]
 
     def __init__(self, fns: Sequence[PFn[Tin, Tout]]):
         """Creates a new parallel forked function.

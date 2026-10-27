@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Sequence, TYPE_CHECKING
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from runtime.threading.core.continue_when import ContinueWhen
 from runtime.threading.core.lock import Lock
@@ -9,7 +11,7 @@ if TYPE_CHECKING: # pragma: no cover
     from runtime.threading.core.interrupt import Interrupt
 
 class Continuation:
-    __slots__ = [ "__lock", "__when", "__what", "__done", "__interrupt", "__referrer__" ]
+    __slots__ = ["__done", "__interrupt", "__lock", "__referrer__", "__what", "__when"]
 
     def __init__(
         self,

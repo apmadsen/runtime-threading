@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import TypeVar, Iterable, Iterator, cast
+
+from collections.abc import Iterable, Iterator
 from time import time
+from typing import TypeVar, cast
 
 from runtime.threading.core.auto_clear_event import AutoClearEvent
-from runtime.threading.core.lock import Lock
 from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.lock import Lock
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterator
 
 T = TypeVar("T")
@@ -14,7 +16,7 @@ Toutput = TypeVar("Toutput")
 class Queue(Iterable[T]):
     """The Queue class is a thread-safe doubly linked FIFO queue.
     """
-    __slots__ = ["__head", "__tail", "__lock", "__notify_event"]
+    __slots__ = ["__head", "__lock", "__notify_event", "__tail"]
 
     def __init__(self):
         self.__head: Queue.Node | None = None
@@ -162,7 +164,7 @@ class Queue(Iterable[T]):
 
 
     class Node:
-        __slots__ = [ "__value", "__previous", "__next" ]
+        __slots__ = ["__next", "__previous", "__value"]
 
         def __init__(self, value: T, previous: Queue.Node | None, next: Queue.Node | None):
             self.__value = value

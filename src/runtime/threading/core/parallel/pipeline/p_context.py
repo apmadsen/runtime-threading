@@ -1,15 +1,19 @@
 from __future__ import annotations
-from typing import ClassVar, overload
-from types import TracebackType
+
 from collections import deque
 from threading import local
+from types import TracebackType
+from typing import ClassVar, Self, overload
 
-from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.defaults import DEFAULT_PARALLELISM
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.lock import Lock
-from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
-from runtime.threading.core.defaults import DEFAULT_PARALLELISM
+from runtime.threading.core.parallel.pipeline.pipeline_exception import (
+    PipelineException,
+)
+from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+
 
 class Stack(local):
     __stack: deque[PContext] | None
@@ -39,12 +43,12 @@ class Stack(local):
 LOCK = Lock()
 STACK = Stack()
 
-class PContext():
+class PContext:
     """The PContext class is used for setting up parallel contexts which in turn provides parallelism options,
     interrupts and schedulers to parallel pipelines.
     """
 
-    __slots__ = [ "__id", "__max_parallelism", "__scheduler", "__interrupt_signal", "__closed" ]
+    __slots__ = ["__closed", "__id", "__interrupt_signal", "__max_parallelism", "__scheduler"]
     __current__id__: ClassVar[int] = 0
 
     @overload
@@ -54,7 +58,6 @@ class PContext():
         Args:
             max_parallelism (int): The max no. of parallel threads.
         """
-        ...
     @overload
     def __init__(
         self,
@@ -69,7 +72,6 @@ class PContext():
             interrupt (Interrupt): The Interrupt.
             scheduler (TaskScheduler): The task scheduler.
         """
-        ...
     def __init__(
         self,
         max_parallelism: int, /,
@@ -146,7 +148,7 @@ class PContext():
         with LOCK:
             return STACK.try_unregister(parent)
 
-    def __enter__(self) -> PContext:
+    def __enter__(self) -> Self:
         with LOCK:
             stack = STACK.get()
             stack.append(self)

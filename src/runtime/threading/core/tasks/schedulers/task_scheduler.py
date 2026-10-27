@@ -1,7 +1,9 @@
 from __future__ import annotations
-from threading import Thread, RLock, current_thread, main_thread
-from typing import ContextManager, Any, ClassVar, TYPE_CHECKING
+
 from abc import ABC, abstractmethod
+from contextlib import AbstractContextManager
+from threading import RLock, Thread, current_thread, main_thread
+from typing import TYPE_CHECKING, Any, ClassVar
 from weakref import WeakKeyDictionary, finalize
 
 if TYPE_CHECKING: # pragma: no cover
@@ -20,7 +22,7 @@ class TaskScheduler(ABC):
     used by all derived schedulers.
     """
 
-    __slots__ = [ "__lock", "__finalizer", "__finalizing", "__weakref__" ]
+    __slots__ = ["__finalizer", "__finalizing", "__lock", "__weakref__"]
     __default__: ClassVar[TaskScheduler | None] = None
 
     def __init__(self):
@@ -66,7 +68,9 @@ class TaskScheduler(ABC):
         """
         with LOCK:
             if TaskScheduler.__default__ is None or TaskScheduler.__default__.is_closed or TaskScheduler.__default__.finalizing:
-                from runtime.threading.core.tasks.schedulers.concurrent_task_scheduler import ConcurrentTaskScheduler
+                from runtime.threading.core.tasks.schedulers.concurrent_task_scheduler import (
+                    ConcurrentTaskScheduler,
+                )
                 TaskScheduler.__default__ = ConcurrentTaskScheduler()
             return TaskScheduler.__default__
 
@@ -173,7 +177,7 @@ class TaskScheduler(ABC):
         ...
 
     @abstractmethod
-    def suspend(self) -> ContextManager[Any]:
+    def suspend(self) -> AbstractContextManager[Any]:
         """Suspends the current task, ie. when waiting on an event.
         """
         ...

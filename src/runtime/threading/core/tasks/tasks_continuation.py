@@ -1,18 +1,20 @@
 from __future__ import annotations
-from typing import Sequence, Any, TYPE_CHECKING
 
-from runtime.threading.core.continuation import ContinueWhen, Continuation
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
+
+from runtime.threading.core.continuation import Continuation, ContinueWhen
+from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
 from runtime.threading.core.tasks.task_state import TaskState
-from runtime.threading.core.tasks.continuation_options import ContinuationOptions
-from runtime.threading.core.interrupt_exception import InterruptException
 
 if TYPE_CHECKING: # pragma: no cover
-    from runtime.threading.core.tasks.task import Task
     from runtime.threading.core.interrupt import Interrupt
+    from runtime.threading.core.tasks.task import Task
 
 class TasksContinuation(Continuation):
-    __slots__ = [ "__what", "__then", "__options", "__states", "__done" ]
+    __slots__ = ["__done", "__options", "__states", "__then", "__what"]
 
     def __init__(
         self, when: ContinueWhen,
@@ -29,11 +31,11 @@ class TasksContinuation(Continuation):
         self.__done = False
 
         if (options & ContinuationOptions.ON_INTERRUPTED) == ContinuationOptions.ON_INTERRUPTED:
-            self.__states |= set([TaskState.INTERRUPTED])
+            self.__states |= {TaskState.INTERRUPTED}
         if (options & ContinuationOptions.ON_FAILED) == ContinuationOptions.ON_FAILED:
-            self.__states |= set([TaskState.FAILED])
+            self.__states |= {TaskState.FAILED}
         if (options & ContinuationOptions.ON_COMPLETED_SUCCESSFULLY) == ContinuationOptions.ON_COMPLETED_SUCCESSFULLY:
-            self.__states |= set([TaskState.COMPLETED])
+            self.__states |= {TaskState.COMPLETED}
 
 
     def try_continue(self) -> bool:
@@ -47,7 +49,7 @@ class TasksContinuation(Continuation):
                     return False
                 else:
                     missing = [ task for task in self.__what if not task.is_completed ]
-                    states = set([ task.state for task in self.__what ])
+                    states = { task.state for task in self.__what }
                     result: bool | None = None
 
                     if self.when == ContinueWhen.ALL:
@@ -59,9 +61,9 @@ class TasksContinuation(Continuation):
                         else:
                             pass
                     elif self.when == ContinueWhen.ANY:
-                        if (self.__options & ContinuationOptions.ON_COMPLETED_SUCCESSFULLY == ContinuationOptions.ON_COMPLETED_SUCCESSFULLY) and TaskState.COMPLETED in states:
+                        if (self.__options & ContinuationOptions.ON_COMPLETED_SUCCESSFULLY == ContinuationOptions.ON_COMPLETED_SUCCESSFULLY) and TaskState.COMPLETED in states:  # noqa: SIM114
                             pass
-                        elif (self.__options & ContinuationOptions.ON_FAILED == ContinuationOptions.ON_FAILED) and TaskState.FAILED in states:
+                        elif (self.__options & ContinuationOptions.ON_FAILED == ContinuationOptions.ON_FAILED) and TaskState.FAILED in states:  # noqa: SIM114
                             pass
                         elif (self.__options & ContinuationOptions.ON_INTERRUPTED == ContinuationOptions.ON_INTERRUPTED) and TaskState.INTERRUPTED in states:
                             pass

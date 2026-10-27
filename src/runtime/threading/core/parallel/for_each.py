@@ -1,12 +1,14 @@
-from typing import Iterable, Callable, Concatenate, ParamSpec, TypeVar, Generic, Any
-from collections.abc import Sized
+from collections.abc import Callable, Iterable, Sized
+from typing import Any, Concatenate, Generic, ParamSpec, TypeVar
 
-from runtime.threading.core.interrupt import Interrupt
-from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.defaults import DEFAULT_PARALLELISM
-from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.parallel.producer_consumer_queue import (
+    ProducerConsumerQueue,
+)
 from runtime.threading.core.tasks.helpers import get_function_name
+from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.tasks.task import Task
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -15,7 +17,7 @@ T = TypeVar("T")
 class ForEachProto(Generic[T]):
     """The ForEachProto class is an intermediary wrapper used to create a parallel for-each process.
     """
-    __slots__ = [ "__items", "__task_name", "__parallelism", "__interrupt", "__scheduler" ]
+    __slots__ = ["__interrupt", "__items", "__parallelism", "__scheduler", "__task_name"]
 
     def __init__(
         self,

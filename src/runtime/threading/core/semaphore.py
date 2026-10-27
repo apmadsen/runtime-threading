@@ -2,6 +2,7 @@ from threading import BoundedSemaphore
 
 from runtime.threading.core.lock_base import LockBase
 
+
 class Semaphore(LockBase):
     """The Semaphore class acts as a lock which allows a preset no. of simultaneous connections before blocking,
     as opposed to a stabdard lock which allows only one connection at a time."""

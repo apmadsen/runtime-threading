@@ -1,6 +1,8 @@
-from threading import RLock, Lock as TLock
+from threading import Lock as TLock
+from threading import RLock
 
 from runtime.threading.core.lock_base import LockBase
+
 
 class Lock(LockBase):
     """The Lock class limits concurrent access to objects by only allowing one single thread to

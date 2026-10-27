@@ -1,15 +1,18 @@
-from typing import Iterable, TypeVar, Generic, Sequence, Any, cast, overload
+from collections.abc import Iterable, Sequence
+from typing import Any, Generic, TypeVar, cast, overload
 
-from runtime.threading.core.tasks.continuation_options import ContinuationOptions
-from runtime.threading.core.tasks.task import Task
-from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
-from runtime.threading.core.tasks.aggregate_exception import AggregateException
-from runtime.threading.core.interrupt_exception import InterruptException
-from runtime.threading.core.parallel.parallel_exception import ParallelException
 from runtime.threading.core.interrupt import Interrupt
-from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
+from runtime.threading.core.interrupt_exception import InterruptException
 from runtime.threading.core.parallel.for_each import for_each
+from runtime.threading.core.parallel.parallel_exception import ParallelException
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
+from runtime.threading.core.parallel.producer_consumer_queue import (
+    ProducerConsumerQueue,
+)
+from runtime.threading.core.tasks.aggregate_exception import AggregateException
+from runtime.threading.core.tasks.continuation_options import ContinuationOptions
+from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.tasks.task import Task
 
 T = TypeVar("T")
 
@@ -20,7 +23,7 @@ class Distributor(Generic[T]):
     The items aren't divided amongst the consumers, but duplicated thus enabling multiple consumers
     to process the same work.
     """
-    __slots__ = [ "__scheduler", "__queue_in", "__queues_out", "__sealed" ]
+    __slots__ = ["__queue_in", "__queues_out", "__scheduler", "__sealed"]
 
     @overload
     def __init__(self, items: Iterable[T], /) -> None:
@@ -29,7 +32,6 @@ class Distributor(Generic[T]):
         Args:
             items (Iterable[T]): The source items
         """
-        ...
     @overload
     def __init__(self, items: Iterable[T], /, scheduler: TaskScheduler) -> None:
         """Creates a new Distributor instance.
@@ -38,7 +40,6 @@ class Distributor(Generic[T]):
             items (Iterable[T]): The source items
             scheduler (TaskScheduler): The scheduler onto which tasks are scheduled.
         """
-        ...
     def __init__(self, items: Iterable[T], /, scheduler: TaskScheduler | None = None):
         self.__queue_in: PIterable[T] = items if isinstance(items, PIterable) else ProducerConsumerQueue[T](items).get_iterator() # put items in a ProducerConsumerQueue, if items is not a PIterable instance
         self.__queues_out: list[ProducerConsumerQueue[T]] = []
@@ -120,7 +121,6 @@ def distribute(items: Iterable[T], /) -> Distributor[T]:
     Returns:
         Distributor[T]: A Distributor instance
     """
-    ...
 @overload
 def distribute(items: Iterable[T], /, scheduler: TaskScheduler ) -> Distributor[T]:
     """Distributes the source items into several consumers.
@@ -132,6 +132,5 @@ def distribute(items: Iterable[T], /, scheduler: TaskScheduler ) -> Distributor[
     Returns:
         Distributor[T]: A Distributor instance
     """
-    ...
 def distribute(items: Iterable[T], /, scheduler: TaskScheduler | None = None) -> Distributor[T]:
     return Distributor[T](items)

@@ -1,12 +1,13 @@
-from typing import Iterable, Callable, TypeVar, Generic, ParamSpec, Concatenate
+from collections.abc import Callable, Iterable
+from typing import Concatenate, Generic, ParamSpec, TypeVar
 
-from runtime.threading.core.interrupt import Interrupt
-from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.defaults import DEFAULT_PARALLELISM
-from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
 from runtime.threading.core.parallel.process import process
 from runtime.threading.core.tasks.helpers import get_function_name
-from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
+from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.tasks.task import Task
 
 Tin = TypeVar("Tin")
 Tout = TypeVar("Tout")
@@ -15,7 +16,7 @@ P = ParamSpec("P")
 class MapProto(Generic[Tin]):
     """The MapProto class is an intermediary wrapper used to create a parallel mapping process.
     """
-    __slots__ = [ "__items", "__task_name", "__parallelism", "__interrupt", "__scheduler" ]
+    __slots__ = ["__interrupt", "__items", "__parallelism", "__scheduler", "__task_name"]
 
     def __init__(
         self,

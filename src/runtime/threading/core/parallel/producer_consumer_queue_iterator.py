@@ -1,11 +1,14 @@
 from __future__ import annotations
-from typing import TypeVar, TYPE_CHECKING
 
-from runtime.threading.core.parallel.pipeline.p_iterable import PIterable, PIterator
+from typing import TYPE_CHECKING, TypeVar
+
 from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.parallel.pipeline.p_iterable import PIterable, PIterator
 
 if TYPE_CHECKING:
-    from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
+    from runtime.threading.core.parallel.producer_consumer_queue import (
+        ProducerConsumerQueue,
+    )
 
 T = TypeVar('T')
 
