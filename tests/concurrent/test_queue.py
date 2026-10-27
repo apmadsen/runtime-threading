@@ -66,6 +66,10 @@ def test_queue(internals):
                     Task.with_all(tasks2, options=ContinuationOptions.DEFAULT).run(put1done)
                     Task.wait_all(tasks1)
 
+                    for task in tasks2:
+                        assert task.exception is None
+                        assert task.is_completed_successfully
+
                     result1: list[int] = []
                     for task in tasks1:
                         result1 += task.result
