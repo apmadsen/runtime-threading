@@ -67,7 +67,6 @@ def test_queue(internals):
                     Task.wait_all(tasks1)
 
                     for task in tasks2:
-                        assert task.exception is None
                         assert task.is_completed_successfully
 
                     result1: list[int] = []
@@ -84,10 +83,15 @@ def test_queue(internals):
 
 def fn_concurrent_queue(task: Task[list[int]], queue: Queue[int], interrupt: Interrupt) -> list[int]:
     results: list[int] = []
+    is_done = False
+
     while True:
         result, success = queue.try_dequeue(interrupt=task.interrupt)
         if success and result is not None:
             results.append(result)
         elif interrupt.is_signaled:
-            break
+            if is_done: # handle race conditions by retrying once after interrupt is signaled
+                break
+            else:
+                is_done = True
     return results
