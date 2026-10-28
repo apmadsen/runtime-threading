@@ -21,10 +21,10 @@ class ProducerConsumerQueue(Generic[T]):
     """The ProducerConsumerQueue class is an implemention of the producer/consumer pattern,
     providing a queue on which work can be added and consumed asynchronously on different threads.
 
-    The workflow is as follows: The producer thread is responsible for putting items into the queue, and subsequently calline `complete()` when done, while the consumer merely
+    The workflow is as follows: The producer thread is responsible for putting items into the queue, and subsequently calling `complete()` when done, while the consumer merely
     consumes the items by either calling `try_take()` repeatedly or iterating over the iterator created by calling `get_iterator()`.
     """
-    __slots__ = ["__async_put_done", "__fail", "__is_async", "__is_complete", "__is_failed", "__lock", "__notify_event", "__queue"]
+    __slots__ = ["__async_put_done", "__complete_event", "__fail", "__is_async", "__is_complete", "__is_failed", "__lock", "__notify_event", "__queue"]
 
     @overload
     def __init__(self) -> None:
@@ -41,6 +41,7 @@ class ProducerConsumerQueue(Generic[T]):
         self.__lock = Lock()
         self.__async_put_done = Event()
         self.__queue: Queue[T] = Queue()
+        self.__complete_event = Event(purpose = "PRODUCER_CONSUMER_QUEUE_NOTIFY")
         self.__notify_event = AutoClearEvent(purpose = "PRODUCER_CONSUMER_QUEUE_NOTIFY")
         self.__is_complete = False
         self.__is_failed = False
@@ -87,13 +88,6 @@ class ProducerConsumerQueue(Generic[T]):
         """Indicates if the queue is consuming from another `ProducerConsumerQueue`.
         """
         return self.__is_async
-
-    @property
-    def wait_event(self) -> Event:
-        """The internal event, signaled when items are added.
-        """
-        return self.__notify_event
-
 
     def put(self, item: T) -> None:
         """Adds an item to the queue.
@@ -185,8 +179,9 @@ class ProducerConsumerQueue(Generic[T]):
                 else: # pragma: no cover
                     continue
 
-                if initial_timeout == 0 or not self.__notify_event.wait(timeout, interrupt):
-                    raise TimeoutError
+                if initial_timeout == 0 or not Event.wait_any((self.__complete_event, self.__notify_event), timeout, interrupt):
+                    raise
+
 
 
     def try_take(
@@ -221,7 +216,8 @@ class ProducerConsumerQueue(Generic[T]):
                 raise QueueCompletedError
 
             self.__is_complete = True
-        self.__notify_event.signal()
+        # self.__notify_event.signal()
+        self.__complete_event.signal()
 
 
     def fail(self, error: Exception) -> None:
