@@ -1,5 +1,6 @@
 from enum import IntEnum
 
+
 class TaskState(IntEnum):
     NOTSTARTED = 0
     SCHEDULED = 1

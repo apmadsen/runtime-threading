@@ -1,17 +1,22 @@
-from typing import Sequence, Iterable, Callable, TypeVar, Concatenate, ParamSpec, Any, Generic, cast, overload
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any, Concatenate, Generic, ParamSpec, TypeVar, cast, overload
 
-from runtime.threading.core.interrupt import Interrupt
-from runtime.threading.core.interrupt_signal import InterruptSignal
-from runtime.threading.core.interrupt_exception import InterruptException
-from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.defaults import DEFAULT_PARALLELISM
-from runtime.threading.core.tasks.continuation_options import ContinuationOptions
-from runtime.threading.core.tasks.aggregate_exception import AggregateException
-from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.interrupt_signal import InterruptSignal
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
-from runtime.threading.core.parallel.producer_consumer_queue_iterator import ProducerConsumerQueueIterator
+from runtime.threading.core.parallel.producer_consumer_queue import (
+    ProducerConsumerQueue,
+)
+from runtime.threading.core.parallel.producer_consumer_queue_iterator import (
+    ProducerConsumerQueueIterator,
+)
+from runtime.threading.core.tasks.aggregate_exception import AggregateException
+from runtime.threading.core.tasks.continuation_options import ContinuationOptions
 from runtime.threading.core.tasks.helpers import get_function_name
+from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.tasks.task import Task
 
 Tin = TypeVar("Tin")
 Tout = TypeVar("Tout")
@@ -20,7 +25,7 @@ P = ParamSpec("P")
 class ProcessProto(Generic[Tin]):
     """The ProcessProto class is an intermediary wrapper used to create a parallel process.
     """
-    __slots__ = [ "__items", "__task_name", "__parallelism", "__interrupt", "__scheduler" ]
+    __slots__ = ["__interrupt", "__items", "__parallelism", "__scheduler", "__task_name"]
 
     def __init__(
         self,
@@ -51,7 +56,6 @@ class ProcessProto(Generic[Tin]):
         Returns:
             PIterable[Tout]: Returns an iterator.
         """
-        ...
     @overload
     def do(
         self,
@@ -68,7 +72,6 @@ class ProcessProto(Generic[Tin]):
         Returns:
             PIterable[Tout]: Returns a task.
         """
-        ...
     def do(
         self,
         fn: Callable[Concatenate[Task[Any], Tin, P], Iterable[Tout]], /,
@@ -116,7 +119,7 @@ class ProcessProto(Generic[Tin]):
                     pass
 
             if len(exceptions) == 1:
-                queue_out.fail(tuple(exceptions.values())[0])
+                queue_out.fail(next(iter(exceptions.values())))
             else:
                 queue_out.fail(AggregateException(tuple(exceptions.values()))) # pragma: no cover -- should never happen sinde underlying tasks will always have the same interrupt
 

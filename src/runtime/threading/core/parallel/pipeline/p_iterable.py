@@ -1,9 +1,10 @@
-from typing import TypeVar, Iterable, Protocol, runtime_checkable, overload
+from collections.abc import Iterable
+from typing import Protocol, TypeVar, overload, runtime_checkable
 
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.parallel.pipeline.p_iterator import PIterator
 
-T = TypeVar("T", covariant=True)
+T = TypeVar("T", covariant=True)  # noqa: PLC0105
 
 @runtime_checkable
 class PIterable(Iterable[T], Protocol):

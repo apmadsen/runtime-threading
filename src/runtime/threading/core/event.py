@@ -1,18 +1,21 @@
 from __future__ import annotations
-import sys
-from threading import Event as TEvent, current_thread, main_thread
-from typing import Sequence, Any, Literal, Annotated, overload, cast, TYPE_CHECKING
-from signal import signal, SIGTERM, SIGINT
-from time import time
 
-from runtime.threading.core.lock import Lock
-from runtime.threading.core.defaults import TASK_SUSPEND_AFTER, POLL_INTERVAL
+import sys
+from collections.abc import Sequence
+from signal import SIGINT, SIGTERM, signal
+from threading import Event as TEvent
+from threading import current_thread, main_thread
+from time import time
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, overload
+
 from runtime.threading.core.continuation import Continuation
-from runtime.threading.core.event_continuation import EventContinuation
 from runtime.threading.core.continue_when import ContinueWhen
-from runtime.threading.core.threading_exception import ThreadingException
+from runtime.threading.core.defaults import POLL_INTERVAL, TASK_SUSPEND_AFTER
+from runtime.threading.core.event_continuation import EventContinuation
 from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.lock import Lock
 from runtime.threading.core.testing.debug import get_events_debugger
+from runtime.threading.core.threading_exception import ThreadingException
 
 if TYPE_CHECKING:
     from runtime.threading.core.interrupt import Interrupt
@@ -25,13 +28,12 @@ Purpose = Literal[ "USER", "TERMINATE", "CONTINUATION", "INTERRUPT_NOTIFY",
 class Event:
     """The Event class is used for synchronization between threads.
     """
-    __slots__ = [ "__id", "__lock", "__purpose", "__internal_event", "__continuations", "__weakref__" ]
+    __slots__ = ["__continuations", "__id", "__internal_event", "__lock", "__purpose", "__weakref__"]
 
     @overload
     def __init__(self) -> None:
         """Creates a new Event.
         """
-        ...
     @overload
     def __init__(self, *, purpose: Purpose = "USER") -> None:
         """Creates a new Event.
@@ -39,7 +41,6 @@ class Event:
         Args:
             purpose (Purpose, optional): The event purpose (used for testing). Defaults to "USER".
         """
-        ...
     @overload
     def __init__(self, internal_event: TEvent) -> None:
         """Creates an event from an existing builtin event.
@@ -47,7 +48,6 @@ class Event:
         Args:
             internal_event (TEvent): The preexisting builtin event instance.
         """
-        ...
     @overload
     def __init__(self, internal_event: TEvent, *, purpose: Purpose = "USER") -> None:
         """Creates an event from an existing builtin event.
@@ -56,7 +56,6 @@ class Event:
             internal_event (TEvent): The preexisting builtin event instance.
             purpose (Purpose, optional): The event purpose (used for testing). Defaults to "USER".
         """
-        ...
     def __init__(self, internal_event: TEvent | None = None, *, purpose: Purpose = "USER"):
         self.__lock = Lock()
         self.__purpose = purpose or "USER"
@@ -262,7 +261,6 @@ class Event:
 
     def _after_wait(self):
         """Overridable function called after event was awaited"""
-        pass
 
     @staticmethod
     def __int_wait(event: TEvent, timeout: float | None = None) -> bool:
@@ -291,7 +289,9 @@ class Event:
                 elif timeout:
                     timeout -= TASK_SUSPEND_AFTER
 
-                from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+                from runtime.threading.core.tasks.schedulers.task_scheduler import (
+                    TaskScheduler,
+                )
                 with TaskScheduler.current().suspend():
                     return event.wait(timeout)
 

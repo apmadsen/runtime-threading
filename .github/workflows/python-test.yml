@@ -10,11 +10,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -23,18 +23,21 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -e ".[test]"
       - name: Test with pytest
-        run: python -m pytest
+        run: |
+          python -m pytest -vv -s `
+            -o faulthandler_timeout=180 `
+            -o faulthandler_exit_on_timeout=true
 
   linux:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         cache: "pip"
@@ -43,5 +46,9 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install -e ".[test]"
     - name: Test with pytest
-      run: python -m pytest
+      run: |
+        python -m pytest -vv -s \
+          -o faulthandler_timeout=180 \
+          -o faulthandler_exit_on_timeout=true \
+
 

@@ -1,12 +1,14 @@
-from typing import Callable, ContextManager
-from types import TracebackType
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from threading import Thread
+from types import TracebackType
 
 from runtime.threading.core.event import terminate_event
-from runtime.threading.core.lock import Lock
-from runtime.threading.core.semaphore import Semaphore
 from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.interrupt_signal import InterruptSignal
+from runtime.threading.core.lock import Lock
+from runtime.threading.core.semaphore import Semaphore
+
 
 def signal_after(signal: InterruptSignal, time: float) -> None:
     """Creates a task which signals an InterruptSignal instance after a certain
@@ -30,7 +32,7 @@ def acquire_or_fail(
     timeout: float,
     fail: Callable[[], Exception],
     interrupt: Interrupt | None = None
-) -> ContextManager[None]:
+) -> AbstractContextManager[None]:
     """Tries to acquire lock for a specific period of time, and, if unsuccessful,
     raises a specific exception after timeout.
 

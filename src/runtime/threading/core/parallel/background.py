@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import Callable, Concatenate, ParamSpec, TypeVar, ClassVar
 
-from runtime.threading.core.interrupt import Interrupt
-from runtime.threading.core.tasks.task import Task
+from collections.abc import Callable
+from typing import ClassVar, Concatenate, ParamSpec, TypeVar
+
 from runtime.threading.core.defaults import DEFAULT_PARALLELISM
-from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.interrupt import Interrupt
 from runtime.threading.core.tasks.helpers import get_function_name
+from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.tasks.task import Task
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -14,7 +16,7 @@ T = TypeVar("T")
 class BackgroundProto:
     """The BackgroundProto class is an intermediary wrapper used to create a parallel background process.
     """
-    __slots__ = [ "__task_name", "__parallelism", "__interrupt", "__scheduler" ]
+    __slots__ = ["__interrupt", "__parallelism", "__scheduler", "__task_name"]
     __default__: ClassVar[BackgroundProto | None] = None
 
     def __new__(

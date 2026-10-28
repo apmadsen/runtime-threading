@@ -1,3 +1,5 @@
+# pyright: basic
+# ruff: noqa
 from typing import Iterable, Any
 from datetime import datetime
 from queue import Queue as OrgQueue, Empty as QueueEmptyException

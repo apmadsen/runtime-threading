@@ -1,6 +1,8 @@
-from typing import Callable, TypeVar, ParamSpec, Any, overload
-from runtime.threading.core.lock import Lock
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar, overload
 from weakref import WeakKeyDictionary
+
+from runtime.threading.core.lock import Lock
 
 R = TypeVar("R")
 P = ParamSpec("P")
@@ -20,7 +22,6 @@ def synclock(name: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     Returns:
         Callable[[Callable[P, R]], Callable[P, R]]: Returns a function wrapper.
     """
-    ...
 @overload
 def synclock(fn: Callable[P, R]) -> Callable[P, R]:
     """Applies lock synchronization to a single function or method.
@@ -31,7 +32,6 @@ def synclock(fn: Callable[P, R]) -> Callable[P, R]:
     Returns:
         Callable[P, R]: Returns a wrapped function.
     """
-    ...
 def synclock(x: str | Callable[P, R]) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R]: # pyright: ignore[reportInconsistentOverload]
 
     if isinstance(x, str):
@@ -54,7 +54,7 @@ def synclock(x: str | Callable[P, R]) -> Callable[[Callable[P, R]], Callable[P, 
     def wrap(fn: Callable[P, R]) -> Callable[P, R]:
         if fn not in FUNCTIONS:
             if hasattr(fn, ATTR):
-                raise Exception("Cannot apply synclock to a function twice")
+                raise Exception("Cannot apply synclock to a function twice")  # noqa: TRY002
 
             wrapped = wrapper(fn)
             setattr(wrapped, ATTR, True)

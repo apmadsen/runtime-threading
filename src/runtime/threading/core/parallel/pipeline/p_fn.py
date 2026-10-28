@@ -1,14 +1,20 @@
 from __future__ import annotations
-from typing import Iterable, Callable, Sequence, TypeVar, Generic, Any, overload, cast
-from math import ceil
-import collections.abc
 
-from runtime.threading.core.tasks.task import Task
-from runtime.threading.core.parallel.pipeline.pipeline_exception import PipelineException
-from runtime.threading.core.parallel.process import process
-from runtime.threading.core.parallel.producer_consumer_queue import ProducerConsumerQueue
+import collections.abc
+from collections.abc import Callable, Iterable, Sequence
+from math import ceil
+from typing import Any, Generic, TypeVar, cast, overload
+
 from runtime.threading.core.parallel.pipeline.p_context import PContext
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
+from runtime.threading.core.parallel.pipeline.pipeline_exception import (
+    PipelineException,
+)
+from runtime.threading.core.parallel.process import process
+from runtime.threading.core.parallel.producer_consumer_queue import (
+    ProducerConsumerQueue,
+)
+from runtime.threading.core.tasks.task import Task
 
 Tin = TypeVar("Tin")
 Tout = TypeVar("Tout")
@@ -20,7 +26,7 @@ class PFn(Generic[Tin, Tout]):
     PContext parallel context.
     """
 
-    __slots__ = ["__fn", "_parent", "_parallelism"]
+    __slots__ = ["__fn", "_parallelism", "_parent"]
 
     @overload
     def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]]) -> None:
@@ -29,7 +35,6 @@ class PFn(Generic[Tin, Tout]):
         Args:
             fn (Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]): The function to parallelize
         """
-        ...
     @overload
     def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]], parallelism: int) -> None:
         """Creates a new parallel function.
@@ -38,7 +43,6 @@ class PFn(Generic[Tin, Tout]):
             fn (Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]): The function to parallelize
             parallelism (int): An int between 1 and 32 representing the max no. of parallel threads.
         """
-        ...
     @overload
     def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]], parallelism: float) -> None:
         """Creates a new parallel function.
@@ -47,8 +51,7 @@ class PFn(Generic[Tin, Tout]):
             fn (Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]): The function to parallelize
             parallelism (float): A float between 0.0 and 1.0 representing the no. of parallel threads relative to the max parallelism of the current PContext
         """
-        ...
-    def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]] | None, parallelism: int | float = 1.0):
+    def __init__(self, fn: Callable[[Task[Iterable[Tout]], Tin], Iterable[Tout]] | None, parallelism: float = 1.0):
         self._parent: PFn[Any, Tin] | None = None
         self.__fn = fn
 
@@ -130,7 +133,6 @@ class NullPFn(PFn[Any, Any]):
     """
     def __init__(self):
         """Override standard PFn constructor"""
-        pass
 
     @overload
     def __or__(self, next: PFn[Tin, Tout]) -> PFn[Tin, Tout]:

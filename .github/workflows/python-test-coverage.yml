@@ -10,11 +10,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.14"]
+        python-version: ["3.15"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         cache: "pip"
@@ -23,4 +23,10 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install -e ".[test]"
     - name: Check coverage with pytest-cov
-      run: python -m pytest --cov-branch --cov-report term-missing --cov=src tests/
+      run: |
+        python -m pytest -vv -s \
+          -o faulthandler_timeout=180 \
+          -o faulthandler_exit_on_timeout=true \
+          --cov-branch \
+          --cov-report term-missing \
+          --cov=src tests/

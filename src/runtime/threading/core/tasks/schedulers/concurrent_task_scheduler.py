@@ -1,26 +1,43 @@
 from __future__ import annotations
-from typing import Any, Callable, ContextManager, cast
-from types import TracebackType
-from threading import Thread, Event as TEvent, current_thread
-from contextlib import nullcontext
 
-from runtime.threading.core.threading_exception import ThreadingException
-from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler, TaskAlreadyStartedOrScheduledError, SchedulerClosedError
+from collections.abc import Callable
+from contextlib import AbstractContextManager, nullcontext
+from threading import Event as TEvent
+from threading import Thread, current_thread
+from types import TracebackType
+from typing import Any, Self, cast
+
+from runtime.threading.core.concurrent.queue import Queue
+from runtime.threading.core.defaults import (
+    DEFAULT_PARALLELISM,
+    POLL_INTERVAL,
+    TASK_KEEP_ALIVE,
+)
+from runtime.threading.core.interrupt_signal import InterruptSignal
+from runtime.threading.core.one_time_event import OneTimeEvent
+from runtime.threading.core.tasks.schedulers.task_scheduler import (
+    SchedulerClosedError,
+    TaskAlreadyStartedOrScheduledError,
+    TaskScheduler,
+)
 from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.task_state import TaskState
-from runtime.threading.core.one_time_event import OneTimeEvent
-from runtime.threading.core.concurrent.queue import Queue
-from runtime.threading.core.interrupt_signal import InterruptSignal
-from runtime.threading.core.defaults import TASK_KEEP_ALIVE, DEFAULT_PARALLELISM, POLL_INTERVAL
+from runtime.threading.core.threading_exception import ThreadingException
 
 
 class ConcurrentTaskScheduler(TaskScheduler):
     """The ConcurrentTaskScheduler class is a task scheduler for concurrent workloads,
     with a predefined max degree of parallelism.
     """
-    __slots__ = [ "__max_parallelism", "__queue",
-                  "__threads", "__active_threads", "__suspended_threads",
-                  "__keep_alive", "__close", "__closed" ]
+    __slots__ = [
+        "__active_threads",
+        "__close",
+        "__closed",
+        "__keep_alive",
+        "__max_parallelism",
+        "__queue",
+        "__suspended_threads",
+        "__threads" ]
 
     def __init__(
         self,
@@ -120,7 +137,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
             else:
                 task.schedule(self)
 
-    def suspend(self) -> ContextManager[Any]:
+    def suspend(self) -> AbstractContextManager[Any]:
         """Suspends the current task, ie. when waiting on an event or lock.
         If called from a thread not created by this scheduler, nothing is changed.
         """
@@ -202,7 +219,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
 
 
 
-    def __enter__(self) -> ConcurrentTaskScheduler:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None):
@@ -221,6 +238,7 @@ class ConcurrentTaskScheduler(TaskScheduler):
             while keep_alive:
                 try:
                     while True:
+                        do_break = False
                         try:
                             if isinstance(task, Task):
                                 super()._run(cast(Task[Any], task))
@@ -233,9 +251,13 @@ class ConcurrentTaskScheduler(TaskScheduler):
                                 if len(self.__active_threads) > self.__max_parallelism:
                                     self.__active_threads.remove(thread)
                                     keep_alive = False
-                                    break
+                                    do_break = True
 
-                            task = self.__queue.dequeue(timeout = self.__keep_alive)
+                            if not do_break:
+                                task = self.__queue.dequeue(timeout = self.__keep_alive)
+
+                        if do_break:
+                            break
 
                 except TimeoutError:
                     try:
@@ -252,9 +274,8 @@ class ConcurrentTaskScheduler(TaskScheduler):
         finally:
             with self.synchronization_lock:
                 self._unregister()
-                if self.__closed is not None:
-                    if len(self.__threads) == 0 and len(self.__suspended_threads) == 0:
-                        self.__closed.signal()
+                if self.__closed is not None and len(self.__threads) == 0 and len(self.__suspended_threads) == 0:
+                    self.__closed.signal()
 
     def _register(self) -> None:
         """Registers the current thread on the task scheduler.

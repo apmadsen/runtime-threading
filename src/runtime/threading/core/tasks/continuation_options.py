@@ -1,5 +1,6 @@
 from enum import IntFlag
 
+
 class ContinuationOptions(IntFlag):
     INLINE = 1
     ON_COMPLETED_SUCCESSFULLY = 2

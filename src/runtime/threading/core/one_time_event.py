@@ -1,6 +1,7 @@
 from runtime.threading.core.event import Event
 from runtime.threading.core.threading_exception import ThreadingException
 
+
 class OneTimeEvent(Event):
     """The OneTimeEvent class extends the base Event by prohibiting clearing after signaling
     thus the name.

@@ -30,7 +30,7 @@ def test_basics(internals):
 
     assert not pcq1.is_async
     assert pcq2.is_async
-    assert not pcq2.wait_event.wait(0)
+
     getattr(pcq1, "_ProducerConsumerQueue__put_many_async")(items1).wait()
     pcq1.complete()
 

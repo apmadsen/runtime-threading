@@ -1,24 +1,32 @@
 from __future__ import annotations
+
+from collections.abc import Callable, Sequence
 from typing import (
-    Sequence, TypeVar, Concatenate, ClassVar, Generic, Callable,
-    ParamSpec, Any, cast, overload
+    Any,
+    ClassVar,
+    Concatenate,
+    Generic,
+    ParamSpec,
+    TypeVar,
+    cast,
+    overload,
 )
 
-from runtime.threading.core.threading_exception import ThreadingException
-from runtime.threading.core.interrupt_exception import InterruptException
-from runtime.threading.core.event import Event
-from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.continue_when import ContinueWhen
-from runtime.threading.core.lock import Lock
+from runtime.threading.core.event import Event
 from runtime.threading.core.interrupt import Interrupt
-from runtime.threading.core.tasks.task_state import TaskState
-from runtime.threading.core.tasks.continuation_options import ContinuationOptions
-from runtime.threading.core.tasks.tasks_continuation import TasksContinuation
-from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
-from runtime.threading.core.tasks.aggregate_exception import AggregateException
-from runtime.threading.core.tasks.task_exception import TaskException
-from runtime.threading.core.tasks.helpers import get_function_name
+from runtime.threading.core.interrupt_exception import InterruptException
+from runtime.threading.core.lock import Lock
+from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.parallel.pipeline.p_context import PContext
+from runtime.threading.core.tasks.aggregate_exception import AggregateException
+from runtime.threading.core.tasks.continuation_options import ContinuationOptions
+from runtime.threading.core.tasks.helpers import get_function_name
+from runtime.threading.core.tasks.schedulers.task_scheduler import TaskScheduler
+from runtime.threading.core.tasks.task_exception import TaskException
+from runtime.threading.core.tasks.task_state import TaskState
+from runtime.threading.core.tasks.tasks_continuation import TasksContinuation
+from runtime.threading.core.threading_exception import ThreadingException
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -37,7 +45,7 @@ LOCK = Lock()
 class TaskProto:
     """The TaskProto class is a Task creation wrapper, used to create new tasks in an easy way.
     """
-    __slots__ = [ "__name", "__interrupt", "__scheduler", "__lazy" ]
+    __slots__ = ["__interrupt", "__lazy", "__name", "__scheduler"]
     __default__: ClassVar[TaskProto | None] = None
 
     def __new__(
@@ -105,9 +113,8 @@ class TaskProto:
         def fn_wrap(task: Task[T]) -> T:
             return fn(task, *args, **kwargs)
 
-        if self.__scheduler is None:
-            if ( pc := PContext.current() ) and pc is not PContext.root():
-                self.__scheduler = pc.scheduler
+        if self.__scheduler is None and ( pc := PContext.current() ) and pc is not PContext.root():
+            self.__scheduler = pc.scheduler
 
         task = Task[T](fn_wrap, self.__name or get_function_name(fn), self.__interrupt, self.__lazy)
         task.schedule(self.__scheduler or TaskScheduler.current())
@@ -135,16 +142,15 @@ class TaskProto:
         def fn_continue(task: Task[Any], other: Task[Any], *args: P.args, **kwargs: P.kwargs) -> T:
             return fn(task, *args, **kwargs)
 
-        if self.__scheduler is None:
-            if ( pc := PContext.current() ) and pc is not PContext.root():
-                self.__scheduler = pc.scheduler
+        if self.__scheduler is None and ( pc := PContext.current() ) and pc is not PContext.root():
+            self.__scheduler = pc.scheduler
 
         return Task.create(interrupt = self.__interrupt).run(fn_sleep).continue_with(ContinuationOptions.ON_COMPLETED_SUCCESSFULLY | ContinuationOptions.INLINE, fn_continue, *args, **kwargs)
 
 class ContinuationProto:
     """The ContinuationProto class is a Task creation wrapper, used to create task continuations in an easy way.
     """
-    __slots__ = [ "__tasks", "__name", "__interrupt", "__when", "__options" ]
+    __slots__ = ["__interrupt", "__name", "__options", "__tasks", "__when"]
 
     def __init__(
         self,
@@ -167,7 +173,7 @@ class ContinuationProto:
             Task[None]: Returns a new task.
         """
         continuation = CompletedTask(None)
-        setattr(continuation, "_Task__state", TaskState.SCHEDULED)
+        continuation._Task__state = TaskState.SCHEDULED # pyright: ignore[reportAttributeAccessIssue]
 
         Event._add_continuation( # pyright: ignore[reportPrivateUsage]
             tuple(task.wait_event for task in self.__tasks),
@@ -199,7 +205,7 @@ class ContinuationProto:
             **kwargs
         )
 
-        setattr(continuation, "_Task__state", TaskState.SCHEDULED)
+        continuation._Task__state = TaskState.SCHEDULED # pyright: ignore[reportAttributeAccessIssue]
 
         Event._add_continuation( # pyright: ignore[reportPrivateUsage]
             tuple(task.wait_event for task in self.__tasks),
@@ -212,8 +218,21 @@ class Task(Generic[T]):
     """The Task class is an abstraction of a regular thread, and it represents an application task of work.
     """
     __slots__ = [
-        "__id", "__name", "__parent", "__scheduler", "__pctx", "__internal_event", "__lock", "__weakref__",
-        "__target", "__exception", "__state", "__interrupt", "__lazy", "__result", "__target_name"
+        "__exception",
+        "__id",
+        "__internal_event",
+        "__interrupt",
+        "__lazy",
+        "__lock",
+        "__name",
+        "__parent",
+        "__pctx",
+        "__result",
+        "__scheduler",
+        "__state",
+        "__target",
+        "__target_name",
+        "__weakref__"
     ]
     __current_id__: ClassVar[int] = 1
 
@@ -360,9 +379,7 @@ class Task(Generic[T]):
                     TaskScheduler.current().prioritise(self)
                 else:
                     raise TaskNotScheduledError
-            elif self.__state == TaskState.INTERRUPTED:
-                raise cast(Exception, self.__exception)
-            elif self.__state == TaskState.FAILED:
+            elif self.__state == TaskState.INTERRUPTED or self.__state == TaskState.FAILED:
                 raise cast(Exception, self.__exception)
             else:
                 pass
@@ -457,7 +474,7 @@ class Task(Generic[T]):
                 #     self.__transition_to(TaskState.INTERRUPTED)
                 else:
                     self.__transition_to(TaskState.FAILED)
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             with self.__lock:
                 self.__exception = ex
                 self.__transition_to(TaskState.FAILED)
@@ -530,19 +547,19 @@ class Task(Generic[T]):
 
     def __transition_to(self, state: TaskState) -> None:
         with self.__lock:
-            if state == TaskState.SCHEDULED and self.__state == TaskState.NOTSTARTED:
+            if state == TaskState.SCHEDULED and self.__state == TaskState.NOTSTARTED:  # noqa: SIM114
                 pass
-            elif state == TaskState.RUNNING and self.__state == TaskState.NOTSTARTED:
+            elif state == TaskState.RUNNING and self.__state == TaskState.NOTSTARTED:  # noqa: SIM114
                 pass
-            elif state == TaskState.RUNNING and self.__state == TaskState.SCHEDULED:
+            elif state == TaskState.RUNNING and self.__state == TaskState.SCHEDULED:  # noqa: SIM114
                 pass
-            elif state == TaskState.INTERRUPTED and self.__state == TaskState.SCHEDULED:
+            elif state == TaskState.INTERRUPTED and self.__state == TaskState.SCHEDULED:  # noqa: SIM114
                 pass
-            elif state == TaskState.INTERRUPTED and self.__state == TaskState.NOTSTARTED:
+            elif state == TaskState.INTERRUPTED and self.__state == TaskState.NOTSTARTED:  # noqa: SIM114
                 pass
-            elif state == TaskState.INTERRUPTED and self.__state == TaskState.RUNNING:
+            elif state == TaskState.INTERRUPTED and self.__state == TaskState.RUNNING:  # noqa: SIM114
                 pass
-            elif state == TaskState.FAILED and self.__state == TaskState.RUNNING:
+            elif state == TaskState.FAILED and self.__state == TaskState.RUNNING:  # noqa: SIM114
                 pass
             elif state == TaskState.COMPLETED and self.__state == TaskState.RUNNING:
                 pass

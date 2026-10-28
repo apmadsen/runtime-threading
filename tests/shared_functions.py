@@ -72,6 +72,9 @@ def fn_raise_interrupt_after_time(task: Task[Any], t_sleep: float):
     task.interrupt.wait_event.wait(t_sleep)
     task.interrupt.raise_if_signaled()
 
+def fn_void_continuation(task: Task[None], other_task: Task[str]) -> None:
+    pass
+
 def fn_continue_and_return_result_or_state(task: Task[str], other_task: Task[str]) -> str:
     if other_task.is_lazy:
         _ =other_task.result

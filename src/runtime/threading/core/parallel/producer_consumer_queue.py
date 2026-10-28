@@ -1,15 +1,16 @@
-from typing import TypeVar, Generic, Iterable, Any, cast, overload
+from collections.abc import Iterable
 from time import time
+from typing import Any, Generic, TypeVar, cast, overload
 
-from runtime.threading.core.event import Event
-from runtime.threading.core.lock import Lock
 from runtime.threading.core.auto_clear_event import AutoClearEvent
 from runtime.threading.core.concurrent.queue import Queue
+from runtime.threading.core.event import Event
+from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.lock import Lock
 from runtime.threading.core.parallel.parallel_exception import ParallelException
 from runtime.threading.core.parallel.pipeline.p_iterable import PIterable
-from runtime.threading.core.tasks.task import Task
 from runtime.threading.core.tasks.continuation_options import ContinuationOptions
-from runtime.threading.core.interrupt import Interrupt
+from runtime.threading.core.tasks.task import Task
 
 QueueCompletedError = ParallelException("ProducerConsumerQueue is completed")
 QueueLinkedToAnotherQueueError = ParallelException("ProducerConsumerQueue is linked to the output of a ProducerConsumerQueueIterator, and therefore cannot be completed manually")
@@ -20,16 +21,15 @@ class ProducerConsumerQueue(Generic[T]):
     """The ProducerConsumerQueue class is an implemention of the producer/consumer pattern,
     providing a queue on which work can be added and consumed asynchronously on different threads.
 
-    The workflow is as follows: The producer thread is responsible for putting items into the queue, and subsequently calline `complete()` when done, while the consumer merely
+    The workflow is as follows: The producer thread is responsible for putting items into the queue, and subsequently calling `complete()` when done, while the consumer merely
     consumes the items by either calling `try_take()` repeatedly or iterating over the iterator created by calling `get_iterator()`.
     """
-    __slots__ = [ "__lock", "__async_put_done", "__queue", "__notify_event", "__is_complete", "__is_failed", "__fail", "__is_async" ]
+    __slots__ = ["__async_put_done", "__complete_event", "__fail", "__is_async", "__is_complete", "__is_failed", "__lock", "__notify_event", "__queue"]
 
     @overload
     def __init__(self) -> None:
         """Creates a new empty ProducerConsumerQueue.
         """
-        ...
     @overload
     def __init__(self, data: Iterable[T]) -> None:
         """Creates a new ProducerConsumerQueue with existing work.
@@ -37,11 +37,11 @@ class ProducerConsumerQueue(Generic[T]):
         Args:
             data (Iterable[T]): Any preexisting work to be added to the queue.
         """
-        ...
     def __init__(self, data: Iterable[T] | None = None):
         self.__lock = Lock()
         self.__async_put_done = Event()
         self.__queue: Queue[T] = Queue()
+        self.__complete_event = Event(purpose = "PRODUCER_CONSUMER_QUEUE_NOTIFY")
         self.__notify_event = AutoClearEvent(purpose = "PRODUCER_CONSUMER_QUEUE_NOTIFY")
         self.__is_complete = False
         self.__is_failed = False
@@ -49,7 +49,9 @@ class ProducerConsumerQueue(Generic[T]):
         self.__fail: Exception | None = None
 
         if data is not None:
-            from runtime.threading.core.parallel.producer_consumer_queue_iterator import ProducerConsumerQueueIterator
+            from runtime.threading.core.parallel.producer_consumer_queue_iterator import (
+                ProducerConsumerQueueIterator,
+            )
             if isinstance(data, ProducerConsumerQueueIterator):
 
                 def complete(task_in: Task[Any], task: Task[T]):
@@ -86,13 +88,6 @@ class ProducerConsumerQueue(Generic[T]):
         """Indicates if the queue is consuming from another `ProducerConsumerQueue`.
         """
         return self.__is_async
-
-    @property
-    def wait_event(self) -> Event:
-        """The internal event, signaled when items are added.
-        """
-        return self.__notify_event
-
 
     def put(self, item: T) -> None:
         """Adds an item to the queue.
@@ -179,15 +174,14 @@ class ProducerConsumerQueue(Generic[T]):
                             else:
                                 raise # pragma: no cover
 
-                    except TimeoutError:
-                        raise
                     finally:
                         self.__lock.release()
                 else: # pragma: no cover
                     continue
 
-                if initial_timeout == 0 or not self.__notify_event.wait(timeout, interrupt):
-                    raise TimeoutError
+                if initial_timeout == 0 or not Event.wait_any((self.__complete_event, self.__notify_event), timeout, interrupt):
+                    raise
+
 
 
     def try_take(
@@ -222,7 +216,8 @@ class ProducerConsumerQueue(Generic[T]):
                 raise QueueCompletedError
 
             self.__is_complete = True
-        self.__notify_event.signal()
+        # self.__notify_event.signal()
+        self.__complete_event.signal()
 
 
     def fail(self, error: Exception) -> None:
@@ -273,7 +268,9 @@ class ProducerConsumerQueue(Generic[T]):
             ProducerConsumerQueueIterator[T]: A ProducerConsumerQueueIterator instance
         """
 
-        from runtime.threading.core.parallel.producer_consumer_queue_iterator import ProducerConsumerQueueIterator
+        from runtime.threading.core.parallel.producer_consumer_queue_iterator import (
+            ProducerConsumerQueueIterator,
+        )
 
         return ProducerConsumerQueueIterator[T](self)
 

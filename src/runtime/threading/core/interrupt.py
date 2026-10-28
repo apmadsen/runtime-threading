@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import Callable, ClassVar, cast
-from weakref import WeakSet
+
 from collections import deque
+from collections.abc import Callable
+from typing import ClassVar, cast
+from weakref import WeakSet
 
 from runtime.threading.core.event import Event
-from runtime.threading.core.one_time_event import OneTimeEvent
 from runtime.threading.core.lock import Lock
+from runtime.threading.core.one_time_event import OneTimeEvent
 
 LOCK = Lock()
 
@@ -13,7 +15,7 @@ class Interrupt:
     """The Interrupt class is used for asynchronous task interruption. The Interrupt instance can be passed around between tasks
     and used to poll for interruption, while the InterruptSignal is used for signaling the Interrupt."""
 
-    __slots__ = ["__lock", "__signal", "__notify_event", "__ex", "__linked", "__weakref__"]
+    __slots__ = ["__ex", "__linked", "__lock", "__notify_event", "__signal", "__weakref__"]
     __none__: ClassVar[Interrupt | None] = None
 
     def __init__(self):
