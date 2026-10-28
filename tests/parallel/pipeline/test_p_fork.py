@@ -15,7 +15,7 @@ from runtime.threading.tasks.schedulers import ConcurrentTaskScheduler, TaskSche
 def test_pfork(internals):
     p = 2
     n = 100
-    with ConcurrentTaskScheduler(8) as scheduler:
+    with ConcurrentTaskScheduler(32) as scheduler:
         with PContext(scheduler.max_parallelism, scheduler=scheduler):
             items = [ i for i in range(n) ]
 
