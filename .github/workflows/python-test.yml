@@ -24,8 +24,8 @@ jobs:
           python -m pip install -e ".[test]"
       - name: Test with pytest
         run: |
-          python -m pytest -vv -s \
-            -o faulthandler_timeout=30 \
+          python -m pytest -vv -s `
+            -o faulthandler_timeout=30 `
             -o faulthandler_exit_on_timeout=true
 
   linux:
