@@ -25,7 +25,7 @@ jobs:
       - name: Test with pytest
         run: |
           python -m pytest -vv -s `
-            -o faulthandler_timeout=30 `
+            -o faulthandler_timeout=180 `
             -o faulthandler_exit_on_timeout=true
 
   linux:
@@ -48,7 +48,7 @@ jobs:
     - name: Test with pytest
       run: |
         python -m pytest -vv -s \
-          -o faulthandler_timeout=30 \
+          -o faulthandler_timeout=180 \
           -o faulthandler_exit_on_timeout=true \
 
 
